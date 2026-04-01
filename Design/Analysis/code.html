@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+
+<html class="light" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-surface-variant": "#5a413e",
+                        "on-primary": "#ffffff",
+                        "inverse-on-surface": "#f0f1f2",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "on-surface": "#191c1d",
+                        "on-primary-container": "#fffbff",
+                        "surface-tint": "#b32823",
+                        "secondary-container": "#fe978c",
+                        "outline-variant": "#e2beba",
+                        "on-tertiary-fixed-variant": "#00504a",
+                        "primary": "#b02521",
+                        "on-error": "#ffffff",
+                        "on-primary-fixed-variant": "#91090e",
+                        "primary-fixed-dim": "#ffb4ab",
+                        "primary-container": "#d33f36",
+                        "on-secondary-container": "#782d27",
+                        "tertiary-fixed-dim": "#63d9ce",
+                        "tertiary": "#006861",
+                        "surface-bright": "#f8f9fa",
+                        "on-primary-fixed": "#410002",
+                        "surface-dim": "#d9dadb",
+                        "on-secondary-fixed-variant": "#792e28",
+                        "on-background": "#191c1d",
+                        "secondary-fixed-dim": "#ffb4ab",
+                        "on-tertiary-container": "#f3fffc",
+                        "secondary": "#97453d",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed": "#ffdad6",
+                        "on-error-container": "#93000a",
+                        "surface-container": "#edeeef",
+                        "outline": "#8e706c",
+                        "inverse-surface": "#2e3132",
+                        "surface-container-highest": "#e1e3e4",
+                        "tertiary-container": "#00837a",
+                        "error": "#ba1a1a",
+                        "inverse-primary": "#ffb4ab",
+                        "on-secondary-fixed": "#3f0304",
+                        "surface-variant": "#e1e3e4",
+                        "background": "#f8f9fa",
+                        "surface-container-high": "#e7e8e9",
+                        "error-container": "#ffdad6",
+                        "surface": "#f8f9fa",
+                        "surface-container-low": "#f3f4f5",
+                        "tertiary-fixed": "#81f6ea",
+                        "on-tertiary-fixed": "#00201d",
+                        "secondary-fixed": "#ffdad6"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .xiangqi-grid {
+            background-image: 
+                linear-gradient(#8e706c 1px, transparent 1px),
+                linear-gradient(90deg, #8e706c 1px, transparent 1px);
+            background-size: 11.11% 10%;
+        }
+        .river-text {
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface selection:bg-primary-fixed selection:text-on-primary-fixed antialiased">
+<!-- Top Navigation Bar -->
+<nav class="bg-slate-50 dark:bg-slate-950 shadow-sm fixed top-0 z-50 w-full docked full-width">
+<div class="flex justify-between items-center w-full px-6 h-16 max-w-screen-2xl mx-auto font-['Manrope'] font-semibold tracking-tight">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-extrabold text-red-600 dark:text-red-500 italic">Xiangqi Master</span>
+<div class="hidden md:flex items-center gap-6">
+<a class="text-red-600 dark:text-red-400 border-b-2 border-red-500 pb-1" href="#">Phân tích</a>
+<a class="text-slate-900 dark:text-slate-100 hover:text-red-500 transition-colors" href="#">Thư viện</a>
+<a class="text-slate-900 dark:text-slate-100 hover:text-red-500 transition-colors" href="#">Mindmap</a>
+<a class="text-slate-900 dark:text-slate-100 hover:text-red-500 transition-colors" href="#">Thực hành</a>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-all active:opacity-80 active:scale-95">
+<span class="material-symbols-outlined text-slate-700 dark:text-slate-300" data-icon="settings">settings</span>
+</button>
+<button class="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-all active:opacity-80 active:scale-95">
+<span class="material-symbols-outlined text-slate-700 dark:text-slate-300" data-icon="person">person</span>
+</button>
+</div>
+</div>
+</nav>
+<!-- Side Navigation (Left Shelf) -->
+<aside class="hidden lg:flex flex-col fixed left-0 top-16 bottom-0 py-6 w-80 bg-white dark:bg-slate-900 border-r border-outline-variant/30 font-['Manrope']">
+<div class="px-6 mb-4">
+<h2 class="text-on-surface font-extrabold text-lg tracking-tight">Nhập liệu biên bản</h2>
+<p class="text-on-surface-variant text-sm font-medium mt-1">Dán ký hiệu hoặc biên bản vào đây</p>
+</div>
+<div class="px-6 flex-1 flex flex-col gap-4">
+<textarea class="flex-1 w-full p-4 bg-surface-container-lowest border border-outline-variant rounded-xl text-sm font-mono focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none text-on-surface" placeholder="Ví dụ: 1. P2-5 M8.7 2. M2.3 X9-8..."></textarea>
+<div class="flex flex-col gap-2">
+<button class="w-full py-3 text-sm font-bold bg-primary text-on-primary rounded-xl shadow-md hover:bg-primary-container transition-all active:scale-[0.98]">Xác nhận</button>
+<button class="w-full py-3 text-sm font-bold text-on-surface-variant border border-outline hover:bg-surface-container-high rounded-xl transition-all active:scale-[0.98]">Xóa</button>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="lg:pl-80 pt-16 min-h-screen">
+<div class="max-w-screen-2xl mx-auto p-6 md:p-8 grid grid-cols-1 xl:grid-cols-12 gap-8">
+<!-- Center Column: Chess Board with Score Bar -->
+<section class="xl:col-span-9 flex items-start justify-center gap-4">
+<!-- Vertical Evaluation Bar -->
+<div class="flex flex-col items-center h-[550px] mt-4 w-12">
+<div class="text-[10px] font-bold text-primary mb-1">+1.42</div>
+<div class="flex-1 w-2.5 bg-on-surface rounded-full overflow-hidden flex flex-col-reverse">
+<div class="bg-primary w-full transition-all duration-500" style="height: 65%;"></div>
+</div>
+<div class="text-[10px] font-bold text-on-surface mt-1">-1.42</div>
+</div>
+<div class="relative flex flex-col items-center">
+<div class="bg-white p-6 rounded-2xl shadow-xl border border-outline-variant/20">
+<!-- The Board Grid -->
+<div class="w-[500px] h-[550px] border-4 border-outline relative bg-[#fdfaf5] p-2">
+<div class="w-full h-full border-2 border-outline relative xiangqi-grid">
+<!-- River -->
+<div class="absolute inset-0 top-[45%] h-[10%] bg-[#fdfaf5] z-10 border-y border-outline flex justify-around items-center px-12">
+<span class="river-text font-headline font-extrabold text-outline-variant text-xl">SỞ HÀ</span>
+<span class="river-text font-headline font-extrabold text-outline-variant text-xl">HÁN GIỚI</span>
+</div>
+<!-- Palace X - Top -->
+<svg class="absolute top-0 left-[33.33%] w-[33.33%] h-[20%] stroke-outline opacity-40" viewbox="0 0 100 100">
+<line x1="0" x2="100" y1="0" y2="100"></line>
+<line x1="100" x2="0" y1="0" y2="100"></line>
+</svg>
+<!-- Palace X - Bottom -->
+<svg class="absolute bottom-0 left-[33.33%] w-[33.33%] h-[20%] stroke-outline opacity-40" viewbox="0 0 100 100">
+<line x1="0" x2="100" y1="0" y2="100"></line>
+<line x1="100" x2="0" y1="0" y2="100"></line>
+</svg>
+<!-- Sample Pieces -->
+<!-- Red King -->
+<div class="absolute bottom-[2%] left-[44%] w-12 h-12 bg-[#fffbff] border-2 border-primary rounded-full shadow-sm flex items-center justify-center z-20">
+<span class="text-primary font-bold text-xl">帥</span>
+</div>
+<!-- Black King -->
+<div class="absolute top-[2%] left-[44%] w-12 h-12 bg-[#fffbff] border-2 border-on-surface rounded-full shadow-sm flex items-center justify-center z-20">
+<span class="text-on-surface font-bold text-xl">將</span>
+</div>
+<!-- Highlight Last Move -->
+<div class="absolute bottom-[22%] left-[78%] w-12 h-12 bg-secondary-container/20 rounded-full border-2 border-dashed border-secondary-container z-10 animate-pulse"></div>
+</div>
+</div>
+<!-- Board Controls -->
+<div class="mt-6 flex justify-center gap-6">
+<button class="w-12 h-12 flex items-center justify-center rounded-full hover:bg-surface-container-high text-on-surface transition-all active:scale-90">
+<span class="material-symbols-outlined" data-icon="first_page">first_page</span>
+</button>
+<button class="w-12 h-12 flex items-center justify-center rounded-full hover:bg-surface-container-high text-on-surface transition-all active:scale-90">
+<span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="w-16 h-16 flex items-center justify-center rounded-full bg-primary text-on-primary shadow-xl hover:bg-primary-container transition-all active:scale-95">
+<span class="material-symbols-outlined text-4xl" data-icon="play_arrow" data-weight="fill" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<button class="w-12 h-12 flex items-center justify-center rounded-full hover:bg-surface-container-high text-on-surface transition-all active:scale-90">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+<button class="w-12 h-12 flex items-center justify-center rounded-full hover:bg-surface-container-high text-on-surface transition-all active:scale-90">
+<span class="material-symbols-outlined" data-icon="last_page">last_page</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Right Column: Simplified Move List -->
+<section class="xl:col-span-3">
+<div class="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-outline-variant/20 flex flex-col h-[650px] overflow-hidden">
+<div class="p-5 border-b border-outline-variant/10 flex justify-between items-center">
+<h3 class="font-headline font-extrabold text-on-surface tracking-tight">Biên bản</h3>
+<div class="flex gap-2">
+<button class="p-2 hover:bg-slate-100 rounded-lg text-primary transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="download">download</span>
+</button>
+<button class="p-2 hover:bg-slate-100 rounded-lg text-primary transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="save">save</span>
+</button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto bg-slate-50/50 dark:bg-slate-950/20">
+<table class="w-full text-sm border-collapse">
+<thead class="sticky top-0 bg-white dark:bg-slate-900 z-10 border-b border-outline-variant/20">
+<tr class="text-on-surface-variant font-bold text-xs uppercase tracking-wider">
+<th class="py-3 px-4 text-left w-12">STT</th>
+<th class="py-3 px-2 text-center">Đỏ</th>
+<th class="py-3 px-2 text-center">Đen</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<tr class="hover:bg-primary/5 cursor-pointer transition-colors group">
+<td class="py-3 px-4 font-bold text-on-surface-variant/60">1.</td>
+<td class="py-3 px-2 text-center font-bold text-on-surface group-hover:text-primary">P2-5</td>
+<td class="py-3 px-2 text-center font-bold text-on-surface group-hover:text-primary">M8.7</td>
+</tr>
+<tr class="bg-primary/10 border-l-4 border-primary">
+<td class="py-3 px-4 font-bold text-primary">2.</td>
+<td class="py-3 px-2 text-center font-extrabold text-primary">M2.3</td>
+<td class="py-3 px-2 text-center font-bold text-on-surface">X9-8</td>
+</tr>
+<tr class="hover:bg-primary/5 cursor-pointer transition-colors group">
+<td class="py-3 px-4 font-bold text-on-surface-variant/60">3.</td>
+<td class="py-3 px-2 text-center font-bold text-on-surface group-hover:text-primary">X1-2</td>
+<td class="py-3 px-2 text-center font-bold text-on-surface group-hover:text-primary">M2.3</td>
+</tr>
+<tr class="hover:bg-primary/5 cursor-pointer transition-colors group">
+<td class="py-3 px-4 font-bold text-on-surface-variant/60">4.</td>
+<td class="py-3 px-2 text-center font-bold text-on-surface group-hover:text-primary">M8.7</td>
+<td class="py-3 px-2 text-center font-bold text-on-surface group-hover:text-primary">P8.9</td>
+</tr>
+<tr class="hover:bg-primary/5 cursor-pointer transition-colors group">
+<td class="py-3 px-4 font-bold text-on-surface-variant/60">5.</td>
+<td class="py-3 px-2 text-center font-bold text-on-surface group-hover:text-primary">B3.1</td>
+<td class="py-3 px-2 text-center font-bold text-on-surface group-hover:text-primary">B3.1</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 bg-white dark:bg-slate-900 border-t border-outline-variant/10 grid grid-cols-2 gap-3">
+<button class="py-3 text-sm font-bold bg-slate-100 hover:bg-slate-200 text-on-surface rounded-xl transition-all">Phân tích sâu</button>
+<button class="py-3 text-sm font-bold bg-primary text-on-primary rounded-xl shadow-lg hover:bg-primary-container transition-all">Thử lại</button>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

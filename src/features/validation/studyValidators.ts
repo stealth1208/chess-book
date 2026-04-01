@@ -1,0 +1,43 @@
+import type { Folder, Variation } from "@/features/types/study";
+
+const MOVE_RE = /^[a-i][0-9][a-i][0-9]$/;
+
+export type ValidationResult = {
+  ok: boolean;
+  message?: string;
+};
+
+export function isValidMoveString(move: string): boolean {
+  return MOVE_RE.test(move);
+}
+
+export function validateFolder(folder: Folder): ValidationResult {
+  const name = folder.name.trim();
+  if (!name) {
+    return { ok: false, message: "Folder name is required." };
+  }
+  if (name.length > 80) {
+    return { ok: false, message: "Folder name cannot exceed 80 characters." };
+  }
+  return { ok: true };
+}
+
+export function validateVariation(variation: Variation): ValidationResult {
+  const name = variation.name.trim();
+  if (!name) {
+    return { ok: false, message: "Variation name is required." };
+  }
+  if (name.length > 120) {
+    return { ok: false, message: "Variation name cannot exceed 120 characters." };
+  }
+  if (!variation.initialFen.trim()) {
+    return { ok: false, message: "Initial FEN is required." };
+  }
+
+  const badMove = variation.moves.find((move) => !isValidMoveString(move));
+  if (badMove) {
+    return { ok: false, message: `Invalid move format: ${badMove}` };
+  }
+
+  return { ok: true };
+}
