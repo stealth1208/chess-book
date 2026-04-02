@@ -2,7 +2,7 @@
 
 ## 1) Folder
 
-- Purpose: Organize variations in a hierarchical tree.
+- Purpose: Organize variations in a hierarchical tree. **Purely organizational — no semantic relationship between variations based on folder placement.**
 - Fields:
   - id: string (UUID)
   - userId: string | null (null for local guest data before migration)
@@ -14,9 +14,10 @@
   - `name` is required, trimmed, length 1..80
   - `parentId` must reference an existing folder or be null
   - No cyclic ancestry allowed
+- Delete constraint: **Blocked** if the folder has any direct child folders or any variations with `folderId === this.id`. User must empty the folder before deleting it.
 - Relationships:
-  - One folder has many child folders
-  - One folder has many variations
+  - One folder has many child folders (parent-child by `parentId`)
+  - One folder has many variations (direct children only — `folderId === folder.id`; no recursive traversal implied)
 
 ## 2) Variation
 
@@ -54,8 +55,8 @@
   - `correctCount + wrongCount` >= currentIndex
 - State transitions:
   - `idle -> active` on start practice
-  - `active -> active` on correct move (index +1)
-  - `active -> active` on wrong move (counts update, board reset per policy)
+  - `active -> active` on correct move (index +1, correctCount +1)
+  - `active -> active` on wrong move (wrongCount +1, correct move highlighted on board, then index +1 — no board reset, no return to start)
   - `active -> completed` when currentIndex == expectedMoves.length
 
 ## 4) MoveRecord (engine-level value object)

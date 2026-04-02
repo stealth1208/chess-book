@@ -1,41 +1,39 @@
-# Implementation Plan: Xiangqi Study App Phase 1 MVP
+# Implementation Plan: Xiangqi Study App — Phase 1 MVP
 
-**Branch**: `001-xiangqi-study-app` | **Date**: 2026-03-31 | **Spec**: `/specs/001-xiangqi-study-app/spec.md`
+**Branch**: `001-xiangqi-study-app` | **Date**: 2026-04-01 | **Spec**: [spec.md](./spec.md)  
 **Input**: Feature specification from `/specs/001-xiangqi-study-app/spec.md`
 
 ## Summary
 
-Deliver a web-first Xiangqi opening study MVP with a pure rules engine, variation and folder management, analysis replay, and persistence split across local guest mode and Supabase-backed authenticated mode. The implementation keeps engine logic isolated from UI, stores study data as `initialFen + moves[]`, and adds deterministic sync behavior by auto-migrating local guest data on first sign-in.
+Build a web PWA for studying Xiangqi (Chinese chess) openings. Core capabilities:
+
+- Play moves on an interactive board, save named variations (`initialFen + moves[]`)
+- Organize variations in a folder tree (purely organizational — no semantic relationships between variations)
+- Replay saved variations move-by-move; practice by guessing the next move (wrong → highlight correct, advance, no reset)
+- View a read-only containment-based mindmap derived from the folder/variation tree
+- Guest mode (localforage) with automatic first-signin migration to Supabase
+
+Technical approach: Next.js App Router + Zustand for state; pure engine module decoupled from UI; localforage for Phase 1 guest storage; Supabase PostgreSQL for authenticated storage.
 
 ## Technical Context
 
-**Language/Version**: TypeScript 5.x, React 19.x, Next.js 16.2.1 (App Router)  
-**Primary Dependencies**: Next.js, React, Zustand, @tanstack/react-query, Mantine, next-pwa, localforage, Supabase client SDK  
-**Storage**: localforage (IndexedDB) for guest mode + Supabase PostgreSQL for authenticated mode  
-**Testing**: ESLint 9 (existing), plus Vitest + Testing Library for unit/component tests and Playwright for key E2E flows  
-**Target Platform**: Desktop and mobile browsers (PWA-installable)  
-**Project Type**: Frontend web application (single Next.js project)  
-**Performance Goals**: Load and render full library under 100 variations without perceptible lag; board interaction remains responsive (<16ms typical frame budget for drag/move UI)  
-**Constraints**: Engine must remain UI-independent; Phase 1 excludes checkmate/AI/search optimization; no drag-and-drop in folder tree; offline-basic operation required  
-**Scale/Scope**: Single-user study library per account; <100 mindmap nodes in Phase 1; folder tree plus variation CRUD and replay/practice entry points
+**Language/Version**: TypeScript 5.x, Node.js 20+  
+**Primary Dependencies**: Next.js 15 (App Router), React 19, Mantine 7, Tailwind CSS 4, Zustand 5, localforage, next-pwa  
+**Storage**: localforage / IndexedDB (guest); Supabase PostgreSQL (authenticated)  
+**Testing**: ESLint (lint enforced); Vitest + React Testing Library + Playwright (planned, see research Decision 6)  
+**Target Platform**: Web (Desktop + Mobile browser), PWA-installable  
+**Project Type**: web-app (PWA)  
+**Performance Goals**: <100 variations load with full replay within normal React render budget; mindmap renders ≤100 nodes without layout jank  
+**Constraints**: Offline-capable for guest mode; engine module stays independent of UI; no checkmate detection, no AI, no drag-drop in Phase 1  
+**Scale/Scope**: <100 mindmap nodes, <100 variations per folder, single-user per session
 
 ## Constitution Check
 
 _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-The current constitution file is still a template (`.specify/memory/constitution.md`) with placeholder principles and no enforceable ratified gates.
+The project constitution (`/.specify/memory/constitution.md`) contains placeholder template text only — no project-specific principles have been ratified. Therefore no constitution gates apply.
 
-Provisional gate policy for this plan:
-
-- PASS: Follow explicit spec constraints as temporary governing rules.
-- PASS: Preserve architecture separation (`engine` pure logic, UI render-only, structured data storage).
-- PASS: Keep Phase 1 scope strict (no AI/search/checkmate additions).
-
-Post-design re-check (Phase 1 outputs):
-
-- PASS: Data model and contracts preserve `FEN + moves[]` as canonical state.
-- PASS: Contracts keep folder tree concerns separate from variation logic.
-- PASS: No unjustified complexity introduced.
+**Post-design re-check**: Still no ratified constitution. No violations.
 
 ## Project Structure
 
@@ -43,35 +41,78 @@ Post-design re-check (Phase 1 outputs):
 
 ```text
 specs/001-xiangqi-study-app/
-├── plan.md
-├── research.md
-├── data-model.md
-├── quickstart.md
+├── plan.md              # This file
+├── research.md          # Phase 0: technical decisions
+├── data-model.md        # Phase 1: entity definitions and validation rules
+├── quickstart.md        # Phase 1: dev setup and validation checklist
 ├── contracts/
-└── tasks.md
+│   ├── engine-contract.md   # Engine and practice evaluation interfaces
+│   └── storage-contract.md  # Persistence and sync contracts
+└── tasks.md             # Phase 2 output (separate /speckit.tasks command)
 ```
 
 ### Source Code (repository root)
 
 ```text
 src/
-├── app/
-│   ├── components/
+├── app/                          # Next.js App Router pages
+│   ├── layout.tsx                # Root layout (TopNav, AuthBootstrap)
+│   ├── page.tsx                  # Analysis tab (default route)
+│   ├── globals.css
+│   ├── components/               # App-level client components
+│   │   ├── AuthBootstrap.tsx     # Auth subscription + migration trigger
+│   │   ├── InputNotation.tsx     # Move notation input
+│   │   └── NewVariationModal.tsx # Save variation form
 │   ├── library/
+│   │   └── page.tsx              # Library management page
 │   ├── mindmap/
+│   │   ├── page.tsx
+│   │   └── components/
+│   │       ├── MindmapCanvas.tsx       # Containment-based node grid
+│   │       └── MindmapDetailPanel.tsx  # Selected node metadata
 │   └── practice/
-├── components/
+│       ├── page.tsx
+│       └── components/
+│           ├── AccuracyCircle.tsx
+│           ├── ActionButtons.tsx
+│           └── ControlGroups.tsx
+├── components/                   # Shared UI components
+│   ├── MoveListPanel.tsx         # Analysis move list + library variation list
+│   ├── QuickStatsWidget.tsx
+│   ├── TopicTreeView.tsx         # Folder/variation tree (Mantine Tree)
+│   ├── TopNav.tsx
 │   └── Board/
-├── engine/
-├── features/
+│       ├── Board.tsx
+│       ├── Piece.tsx
+│       └── Square.tsx
+├── engine/                       # Pure board logic — UI-independent
+│   ├── types.ts                  # Piece, Move, BoardState, Coord
+│   ├── board.ts                  # parseFEN, applyMove, board state
+│   ├── rules.ts                  # validateMove by piece type
+│   ├── game.ts                   # Game session, undo/redo, formatMove
+│   ├── moveNotation.ts           # Canonical move string encode/decode
+│   └── fen.ts                    # FEN serialization/deserialization
+├── features/                     # Domain feature modules
+│   ├── auth/
+│   │   └── supabaseClient.ts     # Auth state (Phase 1: localStorage mock)
+│   ├── errors/
+│   │   └── studyErrors.ts        # Typed errors + user-facing messages (VN)
+│   ├── library/
+│   │   ├── folderService.ts      # Folder CRUD pure helpers (with delete guard)
+│   │   └── variationService.ts   # Variation CRUD pure helpers
+│   ├── mindmap/
+│   │   └── mindmapMapper.ts      # mapStudyToMindmap: folders+variations → graph
+│   ├── practice/
+│   │   └── practiceEvaluator.ts  # evaluatePracticeMove (correct/wrong)
+│   └── storage/
+│       ├── migrationService.ts   # First-signin local→remote idempotent migration
+│       └── remoteRepository.ts   # localforage-backed mock remote (Supabase stub)
 └── store/
-
-public/
-Design/
+    └── useGameStore.ts           # Central Zustand store (persist middleware)
 ```
 
-**Structure Decision**: Use the existing single Next.js app structure, with domain logic in `src/engine`, global state in `src/store`, and route-specific UI under `src/app/*`.
+**Structure Decision**: Single Next.js full-stack project. No separate backend process — Supabase handles auth/DB. Engine is isolated in `src/engine/` as pure functions with no UI imports. Feature business logic lives in `src/features/` as independent modules. Zustand store in `src/store/` is the single source of truth for all UI state.
 
 ## Complexity Tracking
 
-No constitution violations or complexity waivers required at planning time.
+> No constitution violations — no entries required.

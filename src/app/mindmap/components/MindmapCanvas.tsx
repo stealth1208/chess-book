@@ -4,9 +4,13 @@ interface MindmapCanvasProps {
   graph: MindmapGraph;
   selectedNodeId: string | null;
   onSelectNode: (nodeId: string) => void;
+  zoom: number;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onResetZoom: () => void;
 }
 
-export function MindmapCanvas({ graph, selectedNodeId, onSelectNode }: MindmapCanvasProps) {
+export function MindmapCanvas({ graph, selectedNodeId, onSelectNode, zoom, onZoomIn, onZoomOut, onResetZoom }: MindmapCanvasProps) {
   return (
     <section
       className="flex-1 relative bg-surface overflow-hidden"
@@ -17,14 +21,15 @@ export function MindmapCanvas({ graph, selectedNodeId, onSelectNode }: MindmapCa
     >
       <div className="absolute top-6 right-6 z-10 flex gap-2">
         <div className="bg-surface-container-lowest/80 backdrop-blur-md p-1.5 rounded-xl shadow-sm flex items-center border border-outline-variant/10">
-          <button className="p-2 hover:bg-surface-container-low rounded-lg transition-colors"><span className="material-symbols-outlined">zoom_in</span></button>
-          <button className="p-2 hover:bg-surface-container-low rounded-lg transition-colors"><span className="material-symbols-outlined">zoom_out</span></button>
+          <button className="p-2 hover:bg-surface-container-low rounded-lg transition-colors" onClick={onZoomIn}><span className="material-symbols-outlined">zoom_in</span></button>
+          <button className="p-2 hover:bg-surface-container-low rounded-lg transition-colors" onClick={onZoomOut}><span className="material-symbols-outlined">zoom_out</span></button>
           <div className="w-px h-4 bg-outline-variant mx-1"></div>
-          <button className="p-2 hover:bg-surface-container-low rounded-lg transition-colors"><span className="material-symbols-outlined">center_focus_strong</span></button>
+          <button className="p-2 hover:bg-surface-container-low rounded-lg transition-colors" onClick={onResetZoom}><span className="material-symbols-outlined">center_focus_strong</span></button>
+          <span className="px-2 text-xs text-on-surface-variant">{`${Math.round(zoom * 100)}%`}</span>
         </div>
       </div>
 
-      <div className="w-full h-full overflow-auto p-10">
+      <div className="w-full h-full overflow-auto p-10" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
         <div className="min-w-[720px]">
           <svg className="h-16 w-full">
             {graph.edges.slice(0, 20).map((edge, idx) => (

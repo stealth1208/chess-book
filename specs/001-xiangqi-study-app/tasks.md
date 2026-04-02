@@ -1,243 +1,261 @@
 # Tasks: Xiangqi Study App Phase 1 MVP
 
 **Input**: Design documents from `/specs/001-xiangqi-study-app/`
-**Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/, quickstart.md
+**Prerequisites**: plan.md (required), spec.md (required), research.md, data-model.md, contracts/, quickstart.md
 
-**Tests**: Not explicitly requested in the feature specification, so test tasks are omitted in this plan.
+**Tests**: Tests were not explicitly requested in the feature spec, so no dedicated test tasks are included.
 
-**Organization**: Tasks are grouped by user story so each story can be implemented and validated independently.
+**Organization**: Tasks are grouped by user story so each story can be built and validated independently.
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-**Purpose**: Align project tooling and baseline structure for feature delivery.
+**Purpose**: Prepare project structure and shared scaffolding for implementation.
 
-- [x] T001 Update project scripts for lint/build/dev and future test placeholders in package.json
-- [x] T002 Add environment variable template for Supabase integration in .env.example
-- [x] T003 [P] Create shared domain type definitions for folder/variation/migration models in src/features/types/study.ts
-- [x] T004 [P] Create storage key constants for local persistence in src/features/storage/keys.ts
-- [x] T005 Create feature documentation index references in specs/001-xiangqi-study-app/quickstart.md
+- [x] T001 Update feature scripts and task aliases in package.json
+- [x] T002 Configure env template values for auth/storage in .env.example
+- [x] T003 [P] Define shared storage key constants in src/features/storage/keys.ts
+- [x] T004 [P] Define shared study domain types in src/features/types/study.ts
+- [x] T005 Add baseline manual validation checklist section in specs/001-xiangqi-study-app/quickstart.md
 
 ---
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-**Purpose**: Core architecture that all user stories depend on.
+**Purpose**: Core app infrastructure required before user stories.
 
-**CRITICAL**: No user story should start until this phase is complete.
+**CRITICAL**: Complete this phase before user-story implementation.
 
-- [ ] T006 Implement canonical move parser/formatter utilities in src/engine/moveNotation.ts (Deferred: engine lock)
-- [ ] T007 Implement FEN parse/serialize helpers in src/engine/fen.ts (Deferred: engine lock)
-- [x] T008 [P] Implement localforage-backed repository for folders and variations in src/features/storage/localRepository.ts
-- [x] T009 [P] Implement Supabase repository interface and adapter skeleton in src/features/storage/remoteRepository.ts
-- [x] T010 Create storage service facade with guest/user mode switching in src/features/storage/studyStorageService.ts
-- [x] T011 Implement shared validation helpers for Folder and Variation contracts in src/features/validation/studyValidators.ts
-- [x] T012 Extend global game store slices for variation replay and persistence hooks in src/store/useGameStore.ts
-- [x] T013 Add shared error/notification mapping utilities for storage and validation failures in src/features/errors/studyErrors.ts
+- [x] T006 [P] Implement guest localforage repository methods in src/features/storage/localRepository.ts
+- [x] T007 [P] Implement user-scoped remote repository contract in src/features/storage/remoteRepository.ts
+- [x] T008 Implement folder/variation validators and invariants in src/features/validation/studyValidators.ts
+- [x] T009 Implement shared storage service mode switching in src/features/storage/studyStorageService.ts
+- [x] T010 Add foundational study state slices in src/store/useGameStore.ts
+- [x] T011 Add normalized error mapping utilities in src/features/errors/studyErrors.ts
+- [x] T012 Implement auth bootstrap hydration boundary in src/app/components/AuthBootstrap.tsx
+- [x] T013 Add shared data loading status handlers in src/app/components/StudyLoadingBoundary.tsx
 
 **Checkpoint**: Foundation complete, user stories can proceed.
 
-**Dependency Override (Approved 2026-03-31)**: Continue non-engine implementation while T006/T007 remain deferred under the constraint `dont touch engine`.
-
 ---
 
-## Phase 3: User Story 1 - Analysis Board and Replay Engine (Priority: P1) 🎯 MVP
+## Phase 3: User Story 1 - Save and Load Variation (Priority: P1) MVP
 
-**Goal**: User can play legal moves on board, replay a variation timeline, and navigate with undo/redo/jump.
+**Goal**: Users can save and load variation lines deterministically from both Analysis Board and Library.
 
-**Independent Test**: On Analysis page, user can execute legal rook/horse/cannon/pawn moves, then undo/redo and jump to any move index while board state remains deterministic.
+**Independent Test**: Save a variation in Analysis Board, reload from Library, and confirm replay result remains deterministic from `initialFen + moves[]`.
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Implement missing Phase 1 move validation rules and edge constraints in src/engine/rules.ts
-- [ ] T015 [US1] Refactor board state transitions to use canonical move notation helpers in src/engine/game.ts
-- [ ] T016 [P] [US1] Add replay timeline helpers (apply sequence, jump index, current pointer) in src/engine/replay.ts
-- [ ] T017 [US1] Wire replay helpers into store actions for apply/undo/redo/jump in src/store/useGameStore.ts
-- [ ] T018 [P] [US1] Enhance board interaction callbacks for drag/drop move submission in src/components/Board/Board.tsx
-- [ ] T019 [US1] Integrate move list click-to-jump and current highlight behavior in src/components/MoveListPanel.tsx
-- [ ] T020 [US1] Connect analysis route layout to live replay state and controls in src/app/page.tsx
+- [x] T014 [P] [US1] Implement variation create/rename/delete validation behavior in src/features/library/variationService.ts
+- [x] T015 [US1] Implement saveCurrentVariation action using `initialFen + moves[]` in src/store/useGameStore.ts
+- [x] T016 [US1] Implement loadVariationById replay reconstruction in src/store/useGameStore.ts
+- [x] T017 [P] [US1] Implement analysis-specific save button hook in src/app/analysis/hooks/useAnalysisVariationSave.ts
+- [x] T018 [P] [US1] Implement library-specific load/select hook in src/app/library/hooks/useLibraryVariationLoad.ts
+- [x] T019 [P] [US1] Implement library-specific save modal state hook in src/app/library/hooks/useLibraryVariationModal.ts
+- [x] T020 [US1] Wire Analysis Board save variation UI actions in src/app/page.tsx
+- [x] T021 [US1] Wire Library save/load actions and modal triggers in src/app/library/page.tsx
+- [x] T022 [US1] Wire save variation modal submit behavior in src/app/components/NewVariationModal.tsx
+- [x] T023 [US1] Wire variation list load action and feedback states in src/components/MoveListPanel.tsx
+- [x] T024 [US1] Handle malformed variation replay errors in src/features/errors/studyErrors.ts
 
-**Checkpoint**: US1 works independently and is MVP-demo ready.
+**Checkpoint**: US1 works independently and is release-ready as MVP.
 
 ---
 
-## Phase 4: User Story 2 - Library Tree and Variation Management (Priority: P2)
+## Phase 4: User Story 2 - Folder Organization Only (Priority: P2)
 
-**Goal**: User can create folder hierarchy, create/save/load/rename/delete variations, and load selected variation into board.
+**Goal**: Users organize variations in folder tree with direct-child filtering and blocked delete for non-empty folders.
 
-**Independent Test**: In Library view, user can manage folders and variations and load a selected variation to reconstruct board from `initialFen + moves[]`.
+**Independent Test**: Create nested folders, move variations, click parent folder to see only direct children, and verify non-empty folder delete is blocked.
 
 ### Implementation for User Story 2
 
-- [x] T021 [P] [US2] Implement folder CRUD service methods with parent/child integrity checks in src/features/library/folderService.ts
-- [x] T022 [P] [US2] Implement variation CRUD service methods with notation/FEN validation in src/features/library/variationService.ts
-- [x] T023 [US2] Implement library store slice for tree selection and variation list state in src/store/useGameStore.ts
-- [x] T024 [P] [US2] Build folder tree UI with create/rename/delete actions using Mantine tree in src/components/TopicTreeView.tsx
-- [x] T025 [P] [US2] Implement variation list panel actions (save/load/rename/delete) in src/components/MoveListPanel.tsx
-- [x] T026 [US2] Wire library route data loading and folder click flow in src/app/library/page.tsx
-- [x] T027 [US2] Implement save variation flow from current board timeline in src/app/components/NewVariationModal.tsx
-- [x] T028 [US2] Connect variation load flow to replay reconstruction in src/store/useGameStore.ts
+- [x] T025 [P] [US2] Implement folder create/rename rules in src/features/library/folderService.ts
+- [x] T026 [US2] Implement blocked delete policy for non-empty folders in src/features/library/folderService.ts
+- [x] T027 [US2] Implement direct-child variation filtering selectors in src/store/useGameStore.ts
+- [x] T028 [P] [US2] Implement folder tree interaction hook in src/app/library/hooks/useFolderTreeActions.ts
+- [x] T029 [US2] Wire folder tree CRUD and blocked-delete warning UI in src/components/TopicTreeView.tsx
+- [x] T030 [US2] Wire folder selection and filtered variation listing flow in src/app/library/page.tsx
+- [x] T031 [US2] Implement variation folder reassignment action in src/features/library/variationService.ts
 
-**Checkpoint**: US2 works independently with guest storage.
+**Checkpoint**: US2 is independently functional.
 
 ---
 
 ## Phase 5: User Story 3 - Practice Mode (Priority: P3)
 
-**Goal**: User can practice a saved variation by matching expected moves with correctness scoring.
+**Goal**: Users practice variations with correct/wrong scoring and wrong-move highlight-plus-advance behavior.
 
-**Independent Test**: In Practice page, user selects a variation and receives correct/wrong feedback based on expected move sequence while score counters update.
+**Independent Test**: In Practice, submit correct and wrong moves and confirm counters plus highlight/advance behavior without reset.
 
 ### Implementation for User Story 3
 
-- [x] T029 [P] [US3] Implement practice evaluation logic (`correct`/`wrong`, index progression) in src/features/practice/practiceEvaluator.ts
-- [x] T030 [US3] Add practice session state and actions to global store in src/store/useGameStore.ts
-- [x] T031 [P] [US3] Bind practice board move handler to evaluator in src/app/practice/page.tsx
-- [x] T032 [P] [US3] Connect score/time/move counters to real session state in src/app/practice/components/ControlGroups.tsx
-- [x] T033 [P] [US3] Connect accuracy and tips panels to practice result state in src/app/practice/components/AccuracyCircle.tsx
-- [x] T034 [US3] Wire action controls for reset/retry/next variation behavior in src/app/practice/components/ActionButtons.tsx
+- [x] T032 [P] [US3] Implement practice evaluator contract behavior in src/features/practice/practiceEvaluator.ts
+- [x] T033 [US3] Implement practice session actions/state in src/store/useGameStore.ts
+- [x] T034 [P] [US3] Implement practice board input hook in src/app/practice/hooks/usePracticeMoveInput.ts
+- [x] T035 [P] [US3] Implement practice session controls hook in src/app/practice/hooks/usePracticeSessionControls.ts
+- [x] T036 [US3] Wire practice page gameplay and selection flow in src/app/practice/page.tsx
+- [x] T037 [US3] Wire practice counters and timer state in src/app/practice/components/ControlGroups.tsx
+- [x] T038 [US3] Wire practice feedback and action controls in src/app/practice/components/AccuracyCircle.tsx
+- [x] T039 [US3] Wire reset/retry/next callbacks in src/app/practice/components/ActionButtons.tsx
 
-**Checkpoint**: US3 is independently playable with variation-driven scoring.
+**Checkpoint**: US3 works independently with saved variations.
 
 ---
 
-## Phase 6: User Story 4 - Mindmap View (Priority: P4)
+## Phase 6: User Story 4 - Mindmap Read-Only View (Priority: P4)
 
-**Goal**: User can view a read-only mindmap derived from folder and variation data.
+**Goal**: Users view a containment-only mindmap derived from folders and variations.
 
-**Independent Test**: In Mindmap page, user sees a graph generated from current data with less than 100 nodes and can inspect node details.
+**Independent Test**: Mindmap renders folder-to-folder and folder-to-variation edges only and supports read-only selection/detail display.
 
 ### Implementation for User Story 4
 
-- [x] T035 [P] [US4] Implement variation-to-mindmap transformation helpers in src/features/mindmap/mindmapMapper.ts
-- [x] T036 [US4] Implement mindmap store selectors and derived graph memoization in src/store/useGameStore.ts
-- [x] T037 [P] [US4] Render transformed graph and viewport interactions in src/app/mindmap/components/MindmapCanvas.tsx
-- [x] T038 [P] [US4] Render node detail panel from selected graph node in src/app/mindmap/components/MindmapDetailPanel.tsx
-- [x] T039 [US4] Wire mindmap page data load and read-only behavior in src/app/mindmap/page.tsx
+- [x] T040 [P] [US4] Implement containment graph mapper in src/features/mindmap/mindmapMapper.ts
+- [x] T041 [US4] Implement derived graph selectors in src/store/useGameStore.ts
+- [x] T042 [P] [US4] Implement mindmap viewport state hook in src/app/mindmap/hooks/useMindmapViewportState.ts
+- [x] T043 [P] [US4] Implement mindmap node selection hook in src/app/mindmap/hooks/useMindmapNodeSelection.ts
+- [x] T044 [US4] Wire graph rendering interactions in src/app/mindmap/components/MindmapCanvas.tsx
+- [x] T045 [US4] Wire selected node details panel in src/app/mindmap/components/MindmapDetailPanel.tsx
+- [x] T046 [US4] Wire mindmap page data loading and selection flow in src/app/mindmap/page.tsx
 
-**Checkpoint**: US4 view-only graph works independently.
+**Checkpoint**: US4 works independently and stays under scale target.
 
 ---
 
-## Phase 7: User Story 5 - Auth Sync and First Sign-In Migration (Priority: P5)
+## Phase 7: User Story 5 - Auth Sync and First Sign-in Migration (Priority: P5)
 
-**Goal**: Authenticated users sync with Supabase, and first sign-in auto-migrates all guest local data.
+**Goal**: Guest data auto-migrates at first sign-in and app switches to user-scoped sync.
 
-**Independent Test**: With guest data present, first sign-in uploads folders/variations to remote user scope automatically and avoids duplicate migration on subsequent sign-ins.
+**Independent Test**: With guest data, first sign-in migrates once; subsequent sign-ins do not duplicate records.
 
 ### Implementation for User Story 5
 
-- [x] T040 [P] [US5] Add Supabase client initialization and auth session helpers in src/features/auth/supabaseClient.ts
-- [x] T041 [US5] Implement first-signin migration coordinator with idempotent marker in src/features/storage/migrationService.ts
-- [x] T042 [P] [US5] Implement remote upsert and fetch methods for folders/variations in src/features/storage/remoteRepository.ts
-- [x] T043 [US5] Wire auth state changes to storage mode switching in src/store/useGameStore.ts
-- [x] T044 [US5] Trigger automatic migration on successful first authentication in src/app/layout.tsx
-- [x] T045 [US5] Implement graceful fallback and user-facing error handling for migration failures in src/features/errors/studyErrors.ts
+- [x] T047 [P] [US5] Implement auth session adapter/listener methods in src/features/auth/supabaseClient.ts
+- [x] T048 [US5] Implement idempotent migration coordinator in src/features/storage/migrationService.ts
+- [x] T049 [P] [US5] Implement auth state sync hook in src/app/hooks/useAuthStorageSync.ts
+- [x] T050 [P] [US5] Implement first-signin migration trigger hook in src/app/hooks/useFirstSigninMigration.ts
+- [x] T051 [US5] Wire auth mode switching and sync actions in src/store/useGameStore.ts
+- [x] T052 [US5] Wire migration triggers in src/app/components/AuthBootstrap.tsx
+- [x] T053 [US5] Implement migration failure user messaging in src/features/errors/studyErrors.ts
 
-**Checkpoint**: US5 sync and migration flow works independently.
-
----
-
-## Phase 8: Polish & Cross-Cutting Concerns
-
-**Purpose**: Final hardening across all stories.
-
-- [x] T046 [P] Tune performance for library and mindmap rendering under 100 items in src/store/useGameStore.ts
-- [x] T047 [P] Add PWA manifest/service worker configuration validation for offline basics in next.config.ts
-- [ ] T048 Improve responsive layout consistency across analysis/library/practice/mindmap pages in src/app/globals.css
-- [x] T049 Run end-to-end quickstart validation steps and update notes in specs/001-xiangqi-study-app/quickstart.md
-- [x] T050 Final pass on error copy and Vietnamese terminology consistency in src/features/errors/studyErrors.ts
+**Checkpoint**: US5 works independently with migration guarantees.
 
 ---
 
-## Dependencies & Execution Order
+## Phase 8: Polish and Cross-Cutting Concerns
+
+**Purpose**: Final hardening, responsiveness, and deferred user-owned engine item.
+
+- [x] T054 [P] Optimize derived selectors for library and mindmap in src/store/useGameStore.ts
+- [x] T055 [P] Improve responsive tab layout consistency in src/app/globals.css
+- [x] T056 Validate PWA requirements and build-time checks in next.config.ts
+- [x] T057 Run quickstart manual validation and update notes in specs/001-xiangqi-study-app/quickstart.md
+- [ ] T058 Improve engine quality baseline in src/engine/ (user-owned; execute after all non-engine tasks)
+
+---
+
+## Dependencies and Execution Order
 
 ### Phase Dependencies
 
-- Setup (Phase 1): no dependencies.
-- Foundational (Phase 2): depends on Setup.
-- User Stories (Phase 3+): all depend on Foundational completion.
-- Polish (Phase 8): depends on all implemented stories.
-
-Override in effect: Non-engine tasks can proceed while engine tasks remain deferred by explicit user constraint.
+- Phase 1: no dependencies.
+- Phase 2: depends on Phase 1 and blocks all user stories.
+- Phase 3 through Phase 7: depend on Phase 2 completion.
+- Phase 8: depends on selected user stories completion.
 
 ### User Story Dependencies
 
-- US1 (P1): starts immediately after Foundational.
-- US2 (P2): depends on Foundational; can run in parallel with US1 if separate contributors are available.
-- US3 (P3): depends on Foundational and variation loading from US2.
-- US4 (P4): depends on Foundational and variation/folder data availability from US2.
-- US5 (P5): depends on Foundational and storage services from US2.
+- US1 (P1 Save/Load Variation): starts immediately after Foundational; no dependency on other stories.
+- US2 (P2 Folder Organization): depends on US1 save/load pathways for integrated library behavior.
+- US3 (P3 Practice): depends on US1 saved variations.
+- US4 (P4 Mindmap): depends on US2 folder/variation organization data.
+- US5 (P5 Auth/Migration): depends on Foundational storage/auth and integrates with US1/US2 data flows.
 
-### Suggested Story Order for Incremental Delivery
+### Recommended Delivery Order (Save/Load Priority)
 
-1. US1 (MVP board + replay)
-2. US2 (library + variation management)
-3. US3 (practice)
-4. US4 (mindmap view)
-5. US5 (auth sync + migration)
+1. Phase 1 and Phase 2
+2. US1 (Save/Load Variation from Analysis and Library)
+3. US2 (Folder Organization)
+4. US3 and US4
+5. US5
+6. Phase 8 polish and final user-owned engine improvement task
 
 ---
 
 ## Parallel Execution Examples
 
-### User Story 1
+### US1 Save/Load Variation
 
 ```bash
-# Parallelizable US1 tasks
-T016 src/engine/replay.ts
-T018 src/components/Board/Board.tsx
+Task: T014 src/features/library/variationService.ts
+Task: T017 src/app/analysis/hooks/useAnalysisVariationSave.ts
+Task: T018 src/app/library/hooks/useLibraryVariationLoad.ts
+Task: T019 src/app/library/hooks/useLibraryVariationModal.ts
 ```
 
-### User Story 2
+### US2 Folder Organization
 
 ```bash
-# Parallelizable US2 tasks
-T021 src/features/library/folderService.ts
-T022 src/features/library/variationService.ts
-T024 src/components/TopicTreeView.tsx
-T025 src/components/MoveListPanel.tsx
+Task: T025 src/features/library/folderService.ts
+Task: T028 src/app/library/hooks/useFolderTreeActions.ts
 ```
 
-### User Story 3
+### US3 Practice Mode
 
 ```bash
-# Parallelizable US3 tasks
-T029 src/features/practice/practiceEvaluator.ts
-T032 src/app/practice/components/ControlGroups.tsx
-T033 src/app/practice/components/AccuracyCircle.tsx
+Task: T032 src/features/practice/practiceEvaluator.ts
+Task: T034 src/app/practice/hooks/usePracticeMoveInput.ts
+Task: T035 src/app/practice/hooks/usePracticeSessionControls.ts
 ```
 
-### User Story 4
+### US4 Mindmap
 
 ```bash
-# Parallelizable US4 tasks
-T035 src/features/mindmap/mindmapMapper.ts
-T037 src/app/mindmap/components/MindmapCanvas.tsx
-T038 src/app/mindmap/components/MindmapDetailPanel.tsx
+Task: T040 src/features/mindmap/mindmapMapper.ts
+Task: T042 src/app/mindmap/hooks/useMindmapViewportState.ts
+Task: T043 src/app/mindmap/hooks/useMindmapNodeSelection.ts
 ```
 
-### User Story 5
+### US5 Auth Migration
 
 ```bash
-# Parallelizable US5 tasks
-T040 src/features/auth/supabaseClient.ts
-T042 src/features/storage/remoteRepository.ts
+Task: T047 src/features/auth/supabaseClient.ts
+Task: T049 src/app/hooks/useAuthStorageSync.ts
+Task: T050 src/app/hooks/useFirstSigninMigration.ts
 ```
 
 ---
 
 ## Implementation Strategy
 
-### MVP First (Recommended)
+### MVP First
 
 1. Complete Phase 1 and Phase 2.
-2. Complete US1 and validate independently.
-3. Complete US2 and validate save/load flow.
-4. Release MVP subset (US1 + US2).
+2. Deliver US1 end-to-end, including save from Analysis Board and load from Library.
+3. Validate US1 independent test and ship MVP.
 
-### Incremental Expansion
+### Incremental Delivery
 
-1. Add US3 practice mode.
-2. Add US4 mindmap view.
-3. Add US5 auth sync and migration.
-4. Finish Phase 8 polish and quickstart validation.
+1. Add US2 organizational behaviors.
+2. Add US3 practice and US4 mindmap.
+3. Add US5 migration/sync.
+4. Finish Phase 8 polish and T058.
+
+### Parallel Team Strategy
+
+1. Team completes Setup and Foundational.
+2. Then split by hooks/services:
+   - Developer A: US1 store and service tasks.
+   - Developer B: US1 analysis/library hooks and page wiring.
+   - Developer C: Prepare US2 folder hooks and UI wiring.
+3. Merge by user story checkpoint.
+
+---
+
+## Notes
+
+- [P] tasks touch separate files and can run in parallel.
+- [US#] labels map tasks to independent user stories.
+- Hook tasks are separated by concern and feature; no merged all-in-one hook.
+- Engine tasks are deferred from user stories and represented as final T058 user-owned task.

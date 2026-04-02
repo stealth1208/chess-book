@@ -1,3 +1,5 @@
+"use client";
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { BoardState, Move } from '@/engine/types';
@@ -5,11 +7,12 @@ import { createInitialBoard } from '@/engine/board';
 import { validateMove } from '@/engine/rules';
 import { formatMove, parseMove, parseFEN } from '@/engine/game';
 import { createFolderItem, deleteFolderItem, renameFolderItem } from '@/features/library/folderService';
-import { createVariationItem, deleteVariationItem, deleteVariationsByFolderIds, renameVariationItem } from '@/features/library/variationService';
+import { createVariationItem, deleteVariationItem, deleteVariationsByFolderIds, moveVariationToFolderItem, renameVariationItem } from '@/features/library/variationService';
 import { mapStudyToMindmap, MindmapGraph } from '@/features/mindmap/mindmapMapper';
 import { evaluatePracticeMove } from '@/features/practice/practiceEvaluator';
 import { studyStorageService } from '@/features/storage/studyStorageService';
 import type { Folder, Variation } from '@/features/types/study';
+import { handleMalformedReplayFailure } from '@/features/errors/studyErrors';
 import { useState, useEffect } from 'react';
 
 interface GameStore {
@@ -46,6 +49,7 @@ interface GameStore {
   saveCurrentVariation: (name: string, folderId?: string | null) => void;
   renameVariation: (variationId: string, name: string) => void;
   deleteVariation: (variationId: string) => void;
+  moveVariationToFolder: (variationId: string, folderId: string | null) => void;
   selectVariation: (variationId: string | null) => void;
   startPractice: (variationId: string) => void;
   submitPracticeMove: (moveString: string) => 'correct' | 'wrong' | 'invalid';
@@ -170,11 +174,15 @@ export const useGameStore = create<GameStore>()(
           return;
         }
 
-        set({
-          selectedVariationId: variationId,
-          selectedFolderId: variation.folderId,
-        });
-        get().loadVariation(variation.initialFen, variation.moves);
+        try {
+          set({
+            selectedVariationId: variationId,
+            selectedFolderId: variation.folderId,
+          });
+          get().loadVariation(variation.initialFen, variation.moves);
+        } catch (error) {
+          console.warn(handleMalformedReplayFailure(error));
+        }
       },
 
       applyMove: (moveString) => {
@@ -254,16 +262,26 @@ export const useGameStore = create<GameStore>()(
         set((state) => ({
           folders: [...state.folders, createFolderItem(name, parentId)],
         }));
+        studyStorageService.saveFolders(get().folders).catch(console.error);
       },
 
       renameFolder: (folderId, name) => {
         set((state) => ({
           folders: renameFolderItem(state.folders, folderId, name),
         }));
+        studyStorageService.saveFolders(get().folders).catch(console.error);
       },
 
       deleteFolder: (folderId) => {
         set((state) => {
+          const hasChildFolder = state.folders.some((folder) => folder.parentId === folderId);
+          const hasVariations = state.variations.some((variation) => variation.folderId === folderId);
+
+          if (hasChildFolder || hasVariations) {
+            console.warn('Cannot delete non-empty folder.');
+            return state;
+          }
+
           const { nextFolders, deletedIds } = deleteFolderItem(state.folders, folderId);
           const nextVariations = deleteVariationsByFolderIds(state.variations, deletedIds);
           const nextSelectedFolderId = state.selectedFolderId && deletedIds.has(state.selectedFolderId)
@@ -281,6 +299,8 @@ export const useGameStore = create<GameStore>()(
             selectedVariationId: nextSelectedVariationId,
           };
         });
+        studyStorageService.saveFolders(get().folders).catch(console.error);
+        studyStorageService.saveVariations(get().variations).catch(console.error);
       },
 
       selectFolder: (folderId) => {
@@ -301,12 +321,14 @@ export const useGameStore = create<GameStore>()(
             selectedVariationId: nextVariation.id,
           };
         });
+        studyStorageService.saveVariations(get().variations).catch(console.error);
       },
 
       renameVariation: (variationId, name) => {
         set((state) => ({
           variations: renameVariationItem(state.variations, variationId, name),
         }));
+        studyStorageService.saveVariations(get().variations).catch(console.error);
       },
 
       deleteVariation: (variationId) => {
@@ -314,6 +336,14 @@ export const useGameStore = create<GameStore>()(
           variations: deleteVariationItem(state.variations, variationId),
           selectedVariationId: state.selectedVariationId === variationId ? null : state.selectedVariationId,
         }));
+        studyStorageService.saveVariations(get().variations).catch(console.error);
+      },
+
+      moveVariationToFolder: (variationId, folderId) => {
+        set((state) => ({
+          variations: moveVariationToFolderItem(state.variations, variationId, folderId),
+        }));
+        studyStorageService.saveVariations(get().variations).catch(console.error);
       },
 
       selectVariation: (variationId) => {
@@ -355,12 +385,11 @@ export const useGameStore = create<GameStore>()(
           return 'correct';
         }
 
+        // Wrong answer: reveal the expected move and continue to the next step.
+        get().applyMove(expectedMove);
         set((current) => ({
           practiceWrong: current.practiceWrong + 1,
-          practiceIndex: 0,
-          moves: [],
-          currentIndex: -1,
-          board: rebuildBoard(current.initialFen, [], -1),
+          practiceIndex: current.practiceIndex + 1,
         }));
 
         return 'wrong';
@@ -392,6 +421,10 @@ export const useGameStore = create<GameStore>()(
       },
 
       setAuthUser: (userId) => {
+        if (get().authUserId === userId) {
+          return;
+        }
+
         if (userId) {
           studyStorageService.setUserMode(userId);
         } else {
@@ -403,6 +436,14 @@ export const useGameStore = create<GameStore>()(
 
       syncLibraryFromStorage: async () => {
         const snapshot = await studyStorageService.loadSnapshot();
+        // If storage is empty, seed it from the current Zustand-persisted state
+        // to avoid wiping data that was created but not yet written to localforage.
+        const currentState = get();
+        if (snapshot.folders.length === 0 && currentState.folders.length > 0) {
+          await studyStorageService.saveFolders(currentState.folders).catch(console.error);
+          await studyStorageService.saveVariations(currentState.variations).catch(console.error);
+          return;
+        }
         set((state) => ({
           folders: snapshot.folders,
           variations: snapshot.variations,
@@ -422,15 +463,38 @@ export const useGameStore = create<GameStore>()(
  * Uses Zustand's official persist API (no extra state in the store).
  */
 export const useHasHydrated = () => {
-  const [hydrated, setHydrated] = useState(() => useGameStore.persist.hasHydrated());
+  const [hydrated, setHydrated] = useState(() => {
+    const persistApi = (useGameStore as typeof useGameStore & {
+      persist?: {
+        hasHydrated?: () => boolean;
+      };
+    }).persist;
+
+    if (!persistApi?.hasHydrated) {
+      return true;
+    }
+
+    return persistApi.hasHydrated();
+  });
 
   useEffect(() => {
     if (hydrated) {
       return;
     }
 
+    const persistApi = (useGameStore as typeof useGameStore & {
+      persist?: {
+        onFinishHydration?: (listener: () => void) => () => void;
+      };
+    }).persist;
+
+    if (!persistApi?.onFinishHydration) {
+      const timer = window.setTimeout(() => setHydrated(true), 0);
+      return () => window.clearTimeout(timer);
+    }
+
     // Wait for persist hydration to complete.
-    const unsub = useGameStore.persist.onFinishHydration(() => setHydrated(true));
+    const unsub = persistApi.onFinishHydration(() => setHydrated(true));
     return unsub;
   }, [hydrated]);
 

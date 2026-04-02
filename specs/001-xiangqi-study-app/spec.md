@@ -199,29 +199,45 @@ Folder
 
 ---
 
-## 6.3 Features
+## 6.3 Folder Semantics
+
+- Folders are **purely organizational containers** — grouping label only.
+- No semantic relationship exists between variations based on folder placement.
+- A variation in a child folder does NOT inherit, extend, or depend on any variation in a parent folder.
+- Each variation is fully self-contained: `initialFen + moves[]`.
+- Moving a variation between folders changes only its `folderId` label; board behavior is unaffected.
+
+---
+
+## 6.4 Features
 
 - Create folder
 - Rename folder
 - Delete folder
+  - **Blocked** if folder contains any direct variations or any child folders.
+  - User must manually remove or move all contents before deleting.
+  - UI should surface a clear error/warning when delete is blocked.
 
 ---
 
-## 6.4 Tree UI
+## 6.5 Tree UI
 
 - Use Mantine Tree
 - No drag & drop (Phase 1)
 
 ---
 
-## 6.5 Flow
+## 6.6 Flow
 
 ```text
 Click folder
-→ load variations
+→ load variations (filtered by folderId === selectedFolderId, direct children only, no recursion)
 → click variation
-→ load board
+→ load board (parseFEN(initialFen) + apply own moves[] only)
 ```
+
+- Clicking a parent folder does **not** show variations from child folders.
+- User must navigate into a child folder explicitly to see its variations.
 
 ---
 
@@ -316,8 +332,12 @@ Load variation
 → user move
 → compare với moves[currentIndex]
 → đúng → next
-→ sai → reset
+→ sai → highlight correct move (no reset) → advance to next move
 ```
+
+- Wrong move: board stays at current position, correct move is visually highlighted.
+- After highlighting, advance `currentIndex` — no penalty, no reset to start.
+- Scoring still increments `wrong` counter.
 
 ---
 
@@ -340,6 +360,17 @@ Load variation
 ## Data
 
 - Derived từ variation list
+
+---
+
+## Graph Structure
+
+- **Nodes:** one per folder + one per variation
+- **Edges:** containment only
+  - folder → child folder (parent-child)
+  - folder → variation (owner)
+- No edges between sibling variations or across unrelated folders
+- Consistent with folder-as-organization-only rule (§6.3)
 
 ---
 
@@ -453,6 +484,14 @@ variations
 ### Session 2026-03-31
 
 - Q: When a guest user signs in, what happens to their local data? → A: Auto-migrate all local data to the user's account on sign-in (no prompt required).
+
+### Session 2026-04-01
+
+- Q: Does the folder hierarchy imply any semantic relationship or dependency between variations? → A: No. Folders are purely organizational — no relationship, inheritance, or dependency exists between variations based on folder placement. Each variation is self-contained.
+- Q: On a wrong move in practice mode, what happens? → A: Show the correct move (highlight), then advance forward — no reset, no penalty beyond incrementing the wrong counter.
+- Q: What do mindmap edges represent? → A: Containment only — folder → child folder and folder → variation; no edges between sibling variations or across unrelated folders.
+- Q: When clicking a folder, which variations are shown — direct children only or all descendants? → A: Direct children only (folderId === selectedFolderId); no recursive traversal.
+- Q: What happens when deleting a non-empty folder? → A: Blocked — deletion is prevented if the folder has any direct variations or child folders; user must empty it first.
 
 ---
 

@@ -3,7 +3,8 @@ export type StudyErrorCode =
   | "LOCAL_READ"
   | "LOCAL_WRITE"
   | "REMOTE_SYNC"
-  | "MIGRATION";
+  | "MIGRATION"
+  | "MALFORMED_REPLAY";
 
 export type StudyError = {
   code: StudyErrorCode;
@@ -32,6 +33,8 @@ export function toUserMessage(error: unknown): string {
         return "Dong bo du lieu that bai. Vui long thu lai sau.";
       case "MIGRATION":
         return "Khong the chuyen du lieu guest khi dang nhap lan dau.";
+      case "MALFORMED_REPLAY":
+        return "Bien luu khong hop le, khong the tai lai van co.";
       default:
         break;
     }
@@ -46,5 +49,10 @@ export function toUserMessage(error: unknown): string {
 
 export function handleMigrationFailure(cause?: unknown): string {
   const error = createStudyError("MIGRATION", "Guest data migration failed", cause);
+  return toUserMessage(error);
+}
+
+export function handleMalformedReplayFailure(cause?: unknown): string {
+  const error = createStudyError("MALFORMED_REPLAY", "Malformed variation replay", cause);
   return toUserMessage(error);
 }

@@ -5,16 +5,17 @@ import { Board } from "@/components/Board/Board";
 import { MoveListPanel } from "@/components/MoveListPanel";
 import { InputNotation } from "./components/InputNotation";
 import { NewVariationModal } from "./components/NewVariationModal";
-import { useState } from "react";
+import { useAnalysisVariationSave } from "./analysis/hooks/useAnalysisVariationSave";
+import { StudyLoadingBoundary } from "./components/StudyLoadingBoundary";
 
 export default function AnalysisPage() {
   const { board, makeMove, undo, redo, reset } = useGameStore();
-  const [showModal, setShowModal] = useState(false);
+  const { isOpen, open, close } = useAnalysisVariationSave();
   const hydrated = useHasHydrated();
-  if (!hydrated) return null;
 
   return (
-    <div className="flex h-full w-full bg-surface text-on-surface">
+    <StudyLoadingBoundary isReady={hydrated}>
+    <div className="app-page-shell flex h-full w-full bg-surface text-on-surface">
       <InputNotation />
 
       {/* Main Content Canvas */}
@@ -22,7 +23,7 @@ export default function AnalysisPage() {
         <div className="max-w-screen-2xl mx-auto p-6 md:p-8 grid grid-cols-1 xl:grid-cols-12 gap-8 relative">
           
           {/* Center Column: Chess Board & Evaluation */}
-          <section className="xl:col-span-9 flex items-start justify-center gap-6">
+          <section className="app-main-section xl:col-span-9 flex items-start justify-center gap-6">
             {/* Vertical Score Bar */}
             <div className="flex flex-col items-center h-[550px] mt-6 w-12 hidden md:flex">
               <div className="text-[10px] font-bold text-primary mb-1 tracking-tighter">+1.42</div>
@@ -33,12 +34,12 @@ export default function AnalysisPage() {
             </div>
 
             <div className="relative flex flex-col items-center">
-              <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-xl border border-outline-variant/20">
+              <div className="app-board-container bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-xl border border-outline-variant/20">
                 <Board board={board} onMove={makeMove} />
               </div>
               
               {/* Board Controls */}
-              <div className="mt-6 flex justify-center gap-6 w-full max-w-sm">
+              <div className="app-control-bar mt-6 flex justify-center gap-6 w-full max-w-sm">
                 <button className="w-12 h-12 flex items-center justify-center rounded-full hover:bg-surface-container-high text-on-surface transition-all active:scale-90" onClick={reset}>
                   <span className="material-symbols-outlined">first_page</span>
                 </button>
@@ -54,6 +55,9 @@ export default function AnalysisPage() {
                 <button className="w-12 h-12 flex items-center justify-center rounded-full hover:bg-surface-container-high text-on-surface transition-all active:scale-90">
                   <span className="material-symbols-outlined">last_page</span>
                 </button>
+                <button className="px-4 py-2 rounded-xl bg-primary text-on-primary text-sm font-semibold" onClick={open}>
+                  Luu bien
+                </button>
               </div>
             </div>
           </section>
@@ -67,7 +71,8 @@ export default function AnalysisPage() {
         </div>
       </div>
       
-      <NewVariationModal isOpen={showModal} onClose={() => setShowModal(false)} />
+      <NewVariationModal isOpen={isOpen} onClose={close} />
     </div>
+    </StudyLoadingBoundary>
   );
 }

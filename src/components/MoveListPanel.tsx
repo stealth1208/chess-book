@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useGameStore } from '@/store/useGameStore';
+import { useLibraryVariationLoad } from '@/app/library/hooks/useLibraryVariationLoad';
 
 interface MoveListPanelProps {
   variant?: 'analysis' | 'library';
@@ -7,14 +8,13 @@ interface MoveListPanelProps {
 
 export function MoveListPanel({ variant = 'analysis' }: MoveListPanelProps) {
   const isLibrary = variant === 'library';
+  const { selectedVariationId, loadVariationById } = useLibraryVariationLoad();
   const {
     moves,
     currentIndex,
     jumpTo,
     variations,
     selectedFolderId,
-    selectedVariationId,
-    loadVariationById,
     deleteVariation,
     renameVariation,
     getVariationsForFolder,

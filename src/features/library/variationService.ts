@@ -66,3 +66,21 @@ export function deleteVariationItem(variations: Variation[], variationId: string
 export function deleteVariationsByFolderIds(variations: Variation[], folderIds: Set<string>): Variation[] {
   return variations.filter((variation) => !variation.folderId || !folderIds.has(variation.folderId));
 }
+
+export function moveVariationToFolderItem(
+  variations: Variation[],
+  variationId: string,
+  folderId: string | null
+): Variation[] {
+  return variations.map((variation) => {
+    if (variation.id !== variationId) {
+      return variation;
+    }
+
+    return {
+      ...variation,
+      folderId,
+      updatedAt: nowIso(),
+    };
+  });
+}

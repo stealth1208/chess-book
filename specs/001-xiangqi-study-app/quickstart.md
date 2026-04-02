@@ -58,6 +58,11 @@ npm run test:e2e
 4. Test undo, redo, and jump-to-move behavior.
 5. Sign in with local guest data present and verify auto-migration occurs.
 6. Confirm app remains usable offline for previously loaded local data.
+7. Click a parent folder — confirm only its **direct** variations appear (no child-folder variations shown).
+8. Try deleting a non-empty folder — confirm deletion is **blocked** with a clear warning.
+9. Delete all contents from a folder manually, then confirm folder deletion succeeds.
+10. Start practice on a variation; make a wrong move — confirm the correct move is highlighted and the session **advances** (does not reset to move 0).
+11. Confirm mindmap shows folder → child-folder and folder → variation edges only; no edges between sibling variations.
 
 ## Validation Notes (2026-03-31)
 

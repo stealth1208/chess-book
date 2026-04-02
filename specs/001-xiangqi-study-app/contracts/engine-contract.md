@@ -44,7 +44,7 @@ checkPracticeMove(userMove: string, expectedMove: string): "correct" | "wrong"
 
 - Input format: canonical coordinate notation.
 - Correct: advance index by 1.
-- Wrong: keep index unchanged and trigger configured reset behavior.
+- Wrong: increment wrong counter; highlight the correct move visually on the board; then advance index by 1. No board reset, no return to move 0.
 
 ## Non-goals (Phase 1)
 

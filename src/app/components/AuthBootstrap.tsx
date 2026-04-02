@@ -2,26 +2,17 @@
 
 import { useEffect } from 'react';
 import { getCurrentAuthUser, subscribeAuthStateChange } from '@/features/auth/supabaseClient';
-import { migrateGuestDataOnFirstSignIn } from '@/features/storage/migrationService';
-import { handleMigrationFailure } from '@/features/errors/studyErrors';
-import { useGameStore } from '@/store/useGameStore';
+import { useAuthStorageSync } from '@/app/hooks/useAuthStorageSync';
+import { useFirstSigninMigration } from '@/app/hooks/useFirstSigninMigration';
 
 export function AuthBootstrap() {
-  const { setAuthUser, syncLibraryFromStorage } = useGameStore();
+  const { syncForUser } = useAuthStorageSync();
+  const { runMigration } = useFirstSigninMigration();
 
   useEffect(() => {
     const applyAuth = async (userId: string | null) => {
-      setAuthUser(userId);
-
-      if (userId) {
-        const result = await migrateGuestDataOnFirstSignIn(userId);
-        if (result !== 'success') {
-          // Keep non-blocking: app still loads with current mode.
-          console.warn(handleMigrationFailure());
-        }
-      }
-
-      await syncLibraryFromStorage();
+      await runMigration(userId);
+      await syncForUser(userId);
     };
 
     const initialUser = getCurrentAuthUser();
@@ -32,7 +23,7 @@ export function AuthBootstrap() {
     });
 
     return unsubscribe;
-  }, [setAuthUser, syncLibraryFromStorage]);
+  }, [runMigration, syncForUser]);
 
   return null;
 }

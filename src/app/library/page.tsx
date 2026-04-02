@@ -6,29 +6,30 @@ import { TopicTreeView } from "@/components/TopicTreeView";
 import { MoveListPanel } from "@/components/MoveListPanel";
 import { QuickStatsWidget } from "@/components/QuickStatsWidget";
 import { NewVariationModal } from "@/app/components/NewVariationModal";
-import { useState } from "react";
+import { useLibraryVariationModal } from "./hooks/useLibraryVariationModal";
+import { StudyLoadingBoundary } from "@/app/components/StudyLoadingBoundary";
 
 export default function LibraryPage() {
   const { board, makeMove, undo, redo, reset } = useGameStore();
-  const [showModal, setShowModal] = useState(false);
+  const { isOpen, open, close } = useLibraryVariationModal();
   const hydrated = useHasHydrated();
-  if (!hydrated) return null;
 
   return (
-    <div className="flex h-full w-full bg-surface text-on-surface overflow-hidden">
+    <StudyLoadingBoundary isReady={hydrated}>
+    <div className="app-page-shell flex h-full w-full bg-surface text-on-surface overflow-hidden">
       {/* Left Column: Topic TreeView */}
       <aside className="w-80 bg-surface-container-low flex flex-col border-r border-outline-variant/30 hidden lg:flex">
         <TopicTreeView />
       </aside>
 
       {/* Center Column: Interactive Xiangqi Board */}
-      <section className="flex-1 bg-surface flex flex-col items-center justify-center p-8 relative overflow-y-auto">
-        <div className="relative w-full max-w-2xl bg-white rounded-xl shadow-xl overflow-hidden p-8 border border-outline-variant/20">
+      <section className="app-main-section flex-1 bg-surface flex flex-col items-center justify-center p-8 relative overflow-y-auto">
+        <div className="app-board-container relative w-full max-w-2xl bg-white rounded-xl shadow-xl overflow-hidden p-8 border border-outline-variant/20">
           <Board board={board} onMove={makeMove} />
         </div>
 
         {/* Controls Overlay */}
-        <div className="mt-8 flex items-center gap-6 bg-surface-container-lowest px-6 py-3 rounded-2xl shadow-sm border border-outline-variant/20">
+        <div className="app-control-bar mt-8 flex items-center gap-6 bg-surface-container-lowest px-6 py-3 rounded-2xl shadow-sm border border-outline-variant/20">
           <button className="p-2 text-on-surface-variant hover:text-primary transition-colors" onClick={reset}>
             <span className="material-symbols-outlined">first_page</span>
           </button>
@@ -48,7 +49,7 @@ export default function LibraryPage() {
           <button className="p-2 text-on-surface-variant hover:text-primary transition-colors" onClick={reset}>
             <span className="material-symbols-outlined">restart_alt</span>
           </button>
-          <button className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-primary" onClick={() => setShowModal(true)}>
+          <button className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-primary" onClick={open}>
             Luu bien
           </button>
         </div>
@@ -60,7 +61,8 @@ export default function LibraryPage() {
       </aside>
 
       <QuickStatsWidget />
-      <NewVariationModal isOpen={showModal} onClose={() => setShowModal(false)} />
+      <NewVariationModal isOpen={isOpen} onClose={close} />
     </div>
+    </StudyLoadingBoundary>
   );
 }

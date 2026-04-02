@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useGameStore } from '@/store/useGameStore';
+import { useFolderTreeActions } from '@/app/library/hooks/useFolderTreeActions';
 
 export function TopicTreeView() {
   const {
@@ -9,10 +9,11 @@ export function TopicTreeView() {
     selectedVariationId,
     createFolder,
     renameFolder,
-    deleteFolder,
+    tryDeleteFolder,
     selectFolder,
     loadVariationById,
-  } = useGameStore();
+    promptFolderName,
+  } = useFolderTreeActions();
 
   const rootFolders = useMemo(
     () => folders.filter((folder) => folder.parentId === null),
@@ -47,22 +48,18 @@ export function TopicTreeView() {
     return map;
   }, [variations]);
 
-  const promptFolderName = (defaultValue = ''): string | null => {
-    const input = window.prompt('Ten thu muc', defaultValue);
-    if (input === null) {
-      return null;
-    }
-
-    const name = input.trim();
-    return name ? name : null;
-  };
-
-  const renderFolder = (folderId: string | null, depth = 0): JSX.Element[] => {
+  const renderFolder = (folderId: string | null, depth = 0, visited: Set<string> = new Set()) => {
     const list = childFolders.get(folderId) ?? [];
 
     return list.map((folder) => {
+      if (visited.has(folder.id) || depth > 20) {
+        return null;
+      }
+
       const folderVariations = variationsByFolder.get(folder.id) ?? [];
-      const nested = renderFolder(folder.id, depth + 1);
+      const nextVisited = new Set(visited);
+      nextVisited.add(folder.id);
+      const nested = renderFolder(folder.id, depth + 1, nextVisited);
 
       return (
         <div key={folder.id} className="space-y-1">
@@ -85,7 +82,7 @@ export function TopicTreeView() {
             >
               Sua
             </button>
-            <button className="text-xs text-outline hover:text-error" onClick={() => deleteFolder(folder.id)}>
+            <button className="text-xs text-outline hover:text-error" onClick={() => tryDeleteFolder(folder.id)}>
               Xoa
             </button>
           </div>

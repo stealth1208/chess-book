@@ -5,59 +5,33 @@ import { Board } from "@/components/Board/Board";
 import { AccuracyCircle } from "./components/AccuracyCircle";
 import { ActionButtons } from "./components/ActionButtons";
 import { ControlGroups } from "./components/ControlGroups";
-import { formatMove } from "@/engine/game";
-import { Move } from "@/engine/types";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { usePracticeMoveInput } from "./hooks/usePracticeMoveInput";
+import { usePracticeSessionControls } from "./hooks/usePracticeSessionControls";
 
 export default function PracticePage() {
   const {
     board,
     variations,
-    selectedVariationId,
     practiceVariationId,
     practiceExpectedMoves,
     practiceIndex,
     practiceCorrect,
     practiceWrong,
-    startPractice,
-    submitPracticeMove,
-    resetPractice,
   } = useGameStore();
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-
-  useEffect(() => {
-    if (practiceVariationId) {
-      return;
-    }
-
-    const defaultVariationId = selectedVariationId ?? variations[0]?.id;
-    if (defaultVariationId) {
-      startPractice(defaultVariationId);
-    }
-  }, [practiceVariationId, selectedVariationId, startPractice, variations]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setElapsedSeconds((value) => value + 1);
-    }, 1000);
-
-    return () => window.clearInterval(timer);
-  }, []);
+  const { submitMove } = usePracticeMoveInput();
+  const { elapsedSeconds, startVariation, resetSession } = usePracticeSessionControls();
 
   const activeVariation = useMemo(
     () => variations.find((variation) => variation.id === practiceVariationId) ?? null,
     [practiceVariationId, variations]
   );
 
-  const handlePracticeMove = (move: Move) => {
-    submitPracticeMove(formatMove(move));
-  };
-
   const hydrated = useHasHydrated();
   if (!hydrated) return null;
 
   return (
-    <div className="flex h-full w-full bg-surface text-on-surface overflow-hidden">
+    <div className="app-page-shell flex h-full w-full bg-surface text-on-surface overflow-hidden">
       {/* Left: Topic TreeView */}
       <aside className="w-80 bg-surface-container-low hidden lg:flex flex-col border-r border-outline-variant/30 py-6 px-4">
         <div className="mb-6">
@@ -73,10 +47,7 @@ export default function PracticePage() {
                   ? 'bg-white text-red-600 shadow-sm'
                   : 'text-slate-500 hover:translate-x-1'
               }`}
-              onClick={() => {
-                startPractice(variation.id);
-                setElapsedSeconds(0);
-              }}
+              onClick={() => startVariation(variation.id)}
             >
               <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>list_alt</span>
               <span className="text-sm font-medium">{variation.name}</span>
@@ -96,7 +67,7 @@ export default function PracticePage() {
       </aside>
 
       {/* Center: Interactive Board */}
-      <section className="flex-1 bg-surface p-8 overflow-y-auto">
+      <section className="app-main-section flex-1 bg-surface p-8 overflow-y-auto">
         <div className="max-w-3xl mx-auto">
           <div className="flex justify-between items-end mb-8">
             <div>
@@ -104,14 +75,14 @@ export default function PracticePage() {
               <h1 className="font-headline text-3xl font-extrabold text-on-surface">{activeVariation?.name ?? 'Chua chon bien'}</h1>
             </div>
             <div className="flex gap-2">
-              <button className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-xl text-sm font-medium shadow-md hover:opacity-90 transition-all" onClick={() => { resetPractice(); setElapsedSeconds(0); }}>
+              <button className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-xl text-sm font-medium shadow-md hover:opacity-90 transition-all" onClick={resetSession}>
                 <span className="material-symbols-outlined text-lg">refresh</span> Làm lại
               </button>
             </div>
           </div>
           
-          <div className="flex justify-center">
-            <Board board={board} onMove={handlePracticeMove} />
+          <div className="app-board-container flex justify-center">
+            <Board board={board} onMove={submitMove} />
           </div>
 
           <ControlGroups
@@ -129,10 +100,7 @@ export default function PracticePage() {
         <ActionButtons
           correct={practiceCorrect}
           wrong={practiceWrong}
-          onReset={() => {
-            resetPractice();
-            setElapsedSeconds(0);
-          }}
+          onReset={resetSession}
         />
       </aside>
     </div>
