@@ -2,8 +2,8 @@ import "@mantine/core/styles.css";
 import type { Metadata } from "next";
 import { Inter, Manrope } from "next/font/google";
 import { MantineProvider } from "@mantine/core";
-import { TopNav } from "@/components/TopNav";
-import { AuthBootstrap } from "@/app/components/AuthBootstrap";
+import { TopNav } from "@/shared/components/TopNav";
+import { AuthBootstrap } from "@/features/auth";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });

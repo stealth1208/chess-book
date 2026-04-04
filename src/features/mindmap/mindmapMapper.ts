@@ -1,4 +1,4 @@
-import type { Folder, Variation } from '@/features/types/study';
+import type { Folder, Variation } from '@/shared/study/types/study';
 
 export type MindmapNode = {
   id: string;
