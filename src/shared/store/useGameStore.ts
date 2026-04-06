@@ -4,7 +4,6 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { BoardState, Move } from '@/engine/types';
 import { createInitialBoard } from '@/engine/board';
-import { validateMove } from '@/engine/rules';
 import { formatMove, parseMove, parseFEN } from '@/engine/game';
 import { createFolderItem, deleteFolderItem, renameFolderItem } from '@/features/library/services/folderService';
 import { createVariationItem, deleteVariationItem, deleteVariationsByFolderIds, moveVariationToFolderItem, renameVariationItem } from '@/features/library/services/variationService';
@@ -40,8 +39,6 @@ interface GameStore {
   undo: () => void;
   redo: () => void;
   jumpTo: (index: number) => void;
-  jumpToMove: (index: number) => void;
-  reset: () => void;
   createFolder: (name: string, parentId?: string | null) => void;
   renameFolder: (folderId: string, name: string) => void;
   deleteFolder: (folderId: string) => void;
@@ -50,13 +47,11 @@ interface GameStore {
   renameVariation: (variationId: string, name: string) => void;
   deleteVariation: (variationId: string) => void;
   moveVariationToFolder: (variationId: string, folderId: string | null) => void;
-  selectVariation: (variationId: string | null) => void;
   startPractice: (variationId: string) => void;
   submitPracticeMove: (moveString: string) => 'correct' | 'wrong' | 'invalid';
   resetPractice: () => void;
   selectMindmapNode: (nodeId: string | null) => void;
   getMindmapGraph: () => MindmapGraph;
-  getVariationsForFolder: (folderId: string | null) => Variation[];
   setAuthUser: (userId: string | null) => void;
   syncLibraryFromStorage: () => Promise<void>;
 }
@@ -106,9 +101,6 @@ const rebuildBoard = (initialFen: string, moves: string[], currentIndex: number)
 
 let cachedMindmapSignature = '';
 let cachedMindmapGraph: MindmapGraph = { nodes: [], edges: [] };
-let cachedFolderId: string | null = null;
-let cachedVariationSignature = '';
-let cachedVariationsForFolder: Variation[] = [];
 
 const getMemoizedMindmap = (folders: Folder[], variations: Variation[]): MindmapGraph => {
   const signature = JSON.stringify({
@@ -123,22 +115,6 @@ const getMemoizedMindmap = (folders: Folder[], variations: Variation[]): Mindmap
   cachedMindmapSignature = signature;
   cachedMindmapGraph = mapStudyToMindmap(folders, variations);
   return cachedMindmapGraph;
-};
-
-const getMemoizedVariationsForFolder = (variations: Variation[], folderId: string | null): Variation[] => {
-  const signature = JSON.stringify(variations.map((variation) => [variation.id, variation.folderId, variation.updatedAt]));
-
-  if (signature === cachedVariationSignature && folderId === cachedFolderId) {
-    return cachedVariationsForFolder;
-  }
-
-  cachedVariationSignature = signature;
-  cachedFolderId = folderId;
-  cachedVariationsForFolder = folderId
-    ? variations.filter((variation) => variation.folderId === folderId)
-    : variations;
-
-  return cachedVariationsForFolder;
 };
 
 export const useGameStore = create<GameStore>()(
@@ -201,12 +177,8 @@ export const useGameStore = create<GameStore>()(
             piece,
           };
 
-          if (!validateMove(fromCurrentBoard, parsedMove)) {
-            return state;
-          }
-
           const nextMoves = state.moves.slice(0, state.currentIndex + 1);
-          nextMoves.push(moveString);
+          nextMoves.push(formatMove(parsedMove));
           const nextIndex = nextMoves.length - 1;
 
           return {
@@ -244,18 +216,6 @@ export const useGameStore = create<GameStore>()(
             currentIndex: index,
           };
         });
-      },
-
-      jumpToMove: (index) => {
-        get().jumpTo(index);
-      },
-
-      reset: () => {
-        set((state) => ({
-          moves: [],
-          currentIndex: -1,
-          board: rebuildBoard(state.initialFen, [], -1),
-        }));
       },
 
       createFolder: (name, parentId = null) => {
@@ -315,6 +275,7 @@ export const useGameStore = create<GameStore>()(
             moves: state.moves,
             folderId,
           });
+console.log('state.variations', { variations: state.variations, nextVariation});
 
           return {
             variations: [...state.variations, nextVariation],
@@ -344,10 +305,6 @@ export const useGameStore = create<GameStore>()(
           variations: moveVariationToFolderItem(state.variations, variationId, folderId),
         }));
         studyStorageService.saveVariations(get().variations).catch(console.error);
-      },
-
-      selectVariation: (variationId) => {
-        set({ selectedVariationId: variationId });
       },
 
       startPractice: (variationId) => {
@@ -415,11 +372,6 @@ export const useGameStore = create<GameStore>()(
         return getMemoizedMindmap(state.folders, state.variations);
       },
 
-      getVariationsForFolder: (folderId) => {
-        const state = get();
-        return getMemoizedVariationsForFolder(state.variations, folderId);
-      },
-
       setAuthUser: (userId) => {
         if (get().authUserId === userId) {
           return;
@@ -436,19 +388,28 @@ export const useGameStore = create<GameStore>()(
 
       syncLibraryFromStorage: async () => {
         const snapshot = await studyStorageService.loadSnapshot();
-        // If storage is empty, seed it from the current Zustand-persisted state
-        // to avoid wiping data that was created but not yet written to localforage.
         const currentState = get();
         if (snapshot.folders.length === 0 && currentState.folders.length > 0) {
           await studyStorageService.saveFolders(currentState.folders).catch(console.error);
           await studyStorageService.saveVariations(currentState.variations).catch(console.error);
           return;
         }
+
+        const nextSelectedFolderId = currentState.selectedFolderId ?? snapshot.folders[0]?.id ?? null;
+        const nextSelectedVariationId = currentState.selectedVariationId ?? snapshot.variations[0]?.id ?? null;
+        const selectedVariation = snapshot.variations.find((variation) => variation.id === nextSelectedVariationId) ?? null;
+
         set((state) => ({
           folders: snapshot.folders,
           variations: snapshot.variations,
-          selectedFolderId: state.selectedFolderId ?? snapshot.folders[0]?.id ?? null,
-          selectedVariationId: state.selectedVariationId ?? snapshot.variations[0]?.id ?? null,
+          selectedFolderId: nextSelectedFolderId,
+          selectedVariationId: nextSelectedVariationId,
+          initialFen: selectedVariation?.initialFen ?? state.initialFen,
+          moves: selectedVariation ? [...selectedVariation.moves] : state.moves,
+          currentIndex: selectedVariation ? selectedVariation.moves.length - 1 : state.currentIndex,
+          board: selectedVariation
+            ? rebuildBoard(selectedVariation.initialFen, selectedVariation.moves, selectedVariation.moves.length - 1)
+            : state.board,
         }));
       },
     }),
@@ -484,9 +445,16 @@ export const useHasHydrated = () => {
 
     const persistApi = (useGameStore as typeof useGameStore & {
       persist?: {
+        hasHydrated?: () => boolean;
         onFinishHydration?: (listener: () => void) => () => void;
       };
     }).persist;
+
+    // Re-check current hydration status in case it completed before subscription.
+    if (persistApi?.hasHydrated?.()) {
+      const timer = window.setTimeout(() => setHydrated(true), 0);
+      return () => window.clearTimeout(timer);
+    }
 
     if (!persistApi?.onFinishHydration) {
       const timer = window.setTimeout(() => setHydrated(true), 0);
@@ -495,7 +463,11 @@ export const useHasHydrated = () => {
 
     // Wait for persist hydration to complete.
     const unsub = persistApi.onFinishHydration(() => setHydrated(true));
-    return unsub;
+    const fallback = window.setTimeout(() => setHydrated(true), 1500);
+    return () => {
+      unsub();
+      window.clearTimeout(fallback);
+    };
   }, [hydrated]);
 
   return hydrated;

@@ -9,9 +9,10 @@ import { useState } from "react";
 interface BoardProps {
   board: BoardState;
   onMove?: (move: Move) => void;
+  interactive?: boolean;
 }
 
-export function Board({ board, onMove }: BoardProps) {
+export function Board({ board, onMove, interactive = true }: BoardProps) {
   const [selectedCoord, setSelectedCoord] = useState<Coordinate | null>(null);
 
   const squareSize = 60; // 60px per square intersection
@@ -19,6 +20,10 @@ export function Board({ board, onMove }: BoardProps) {
   const boardHeight = 9 * squareSize; // 9 squares high (10 lines)
 
   const handleSquareClick = (x: number, y: number) => {
+    if (!interactive) {
+      return;
+    }
+
     const clickedPiece = board[y][x];
 
     if (selectedCoord) {
@@ -126,7 +131,7 @@ export function Board({ board, onMove }: BoardProps) {
                 pointerEvents: "none" // Let the Square beneath it catch clicks
               }}
             >
-              <PieceComponent piece={piece} />
+              <PieceComponent piece={piece} interactive={interactive} />
             </Box>
           )
         ))

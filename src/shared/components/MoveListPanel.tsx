@@ -1,26 +1,20 @@
 import { useMemo } from 'react';
 import { useGameStore } from '@/shared/store/useGameStore';
-import { useLibraryVariationLoad } from '@/features/library/hooks/useLibraryVariationLoad';
 
 interface MoveListPanelProps {
   variant?: 'analysis' | 'library';
+  onSaveVariation?: () => void;
 }
 
-export function MoveListPanel({ variant = 'analysis' }: MoveListPanelProps) {
+export function MoveListPanel({ variant = 'analysis', onSaveVariation }: MoveListPanelProps) {
   const isLibrary = variant === 'library';
-  const { selectedVariationId, loadVariationById } = useLibraryVariationLoad();
   const {
     moves,
     currentIndex,
     jumpTo,
     variations,
-    selectedFolderId,
-    deleteVariation,
-    renameVariation,
-    getVariationsForFolder,
+    selectedVariationId,
   } = useGameStore();
-
-  const libraryVariations = getVariationsForFolder(selectedFolderId);
 
   const activeVariation = variations.find((variation) => variation.id === selectedVariationId) ?? null;
 
@@ -38,23 +32,24 @@ export function MoveListPanel({ variant = 'analysis' }: MoveListPanelProps) {
 
   return (
     <>
-      {/* Header */}
-      <div className={`p-${isLibrary ? '6' : '5'} border-b border-outline-variant/10 flex justify-between items-center`}>
+      <div className={`${isLibrary ? 'p-6' : 'p-5'} border-b border-outline-variant/10 flex items-center justify-between`}>
         {isLibrary ? (
-          <>
-            <div className="flex justify-between items-center w-full mb-4">
-              <h2 className="font-headline font-extrabold text-lg text-on-surface tracking-tight">Kí phổ</h2>
-              <span className="px-2 py-0.5 bg-tertiary/10 text-tertiary text-[10px] font-bold rounded uppercase tracking-wider">{`So bien: ${libraryVariations.length}`}</span>
+          <div className="flex w-full items-center justify-between gap-3">
+            <div>
+              <h2 className="font-headline text-lg font-extrabold tracking-tight text-on-surface">Kí phổ</h2>
+              <p className="text-xs text-on-surface-variant">
+                {activeVariation ? activeVariation.name : 'Chon mot bien trong TopicView de xem lai.'}
+              </p>
             </div>
-          </>
+            <span className="rounded bg-tertiary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-tertiary">
+              {`So nuoc: ${moves.length}`}
+            </span>
+          </div>
         ) : (
           <>
             <h3 className="font-headline font-extrabold text-on-surface tracking-tight">Biên bản</h3>
             <div className="flex gap-2">
-              <button className="p-2 hover:bg-slate-100 rounded-lg text-primary transition-colors flex items-center">
-                <span className="material-symbols-outlined text-xl">download</span>
-              </button>
-              <button className="p-2 hover:bg-slate-100 rounded-lg text-primary transition-colors flex items-center">
+              <button className="p-2 hover:bg-slate-100 rounded-lg text-primary transition-colors flex items-center" onClick={onSaveVariation}>
                 <span className="material-symbols-outlined text-xl">save</span>
               </button>
             </div>
@@ -62,54 +57,10 @@ export function MoveListPanel({ variant = 'analysis' }: MoveListPanelProps) {
         )}
       </div>
 
-      {isLibrary && (
-        <div className="px-6 pb-4">
-          <div className="flex gap-2">
-            <button className="flex-1 py-2 text-sm font-bold bg-surface-container-highest rounded-xl text-on-surface-variant hover:bg-surface-container-high transition-colors">Chi tiết</button>
-            <button className="flex-1 py-2 text-sm font-bold bg-primary text-on-primary rounded-xl shadow-md hover:opacity-90 transition-all">Biến thể</button>
-          </div>
-        </div>
-      )}
-
-      {/* Move Table */}
       <div className={`flex-1 overflow-y-auto custom-scrollbar ${isLibrary ? 'bg-surface-container-low' : 'bg-slate-50/30 dark:bg-slate-950/20'}`}>
-        {isLibrary ? (
-          <div className="space-y-2 p-4">
-            {libraryVariations.length === 0 && (
-              <p className="text-sm text-on-surface-variant">Khong co bien nao trong thu muc nay.</p>
-            )}
-
-            {libraryVariations.map((variation) => (
-              <div
-                key={variation.id}
-                className={`rounded-xl border p-3 ${
-                  variation.id === selectedVariationId
-                    ? 'border-primary bg-primary/10'
-                    : 'border-outline-variant/20 bg-surface-container-lowest'
-                }`}
-              >
-                <button className="w-full text-left" onClick={() => loadVariationById(variation.id)}>
-                  <div className="font-semibold text-on-surface">{variation.name}</div>
-                  <div className="text-xs text-on-surface-variant">{`So nuoc: ${variation.moves.length}`}</div>
-                </button>
-                <div className="mt-2 flex gap-2 text-xs">
-                  <button
-                    className="rounded bg-surface-container-high px-2 py-1"
-                    onClick={() => {
-                      const nextName = window.prompt('Doi ten bien', variation.name);
-                      if (nextName && nextName.trim()) {
-                        renameVariation(variation.id, nextName);
-                      }
-                    }}
-                  >
-                    Doi ten
-                  </button>
-                  <button className="rounded bg-error/10 px-2 py-1 text-error" onClick={() => deleteVariation(variation.id)}>
-                    Xoa
-                  </button>
-                </div>
-              </div>
-            ))}
+        {moves.length === 0 ? (
+          <div className="p-4 text-sm text-on-surface-variant">
+            {isLibrary ? 'Chua co nuoc di de hien thi.' : 'Di mot vai nuoc tren ban co hoac nhan luu bien de tao bien moi.'}
           </div>
         ) : (
           <table className="w-full text-sm border-collapse">
@@ -124,10 +75,10 @@ export function MoveListPanel({ variant = 'analysis' }: MoveListPanelProps) {
               {analysisRows.map((row) => {
                 const isCurrent = currentIndex >= row.idx * 2 && currentIndex <= row.idx * 2 + 1;
                 return (
-                  <tr key={row.idx} className={`cursor-pointer transition-colors ${isCurrent ? 'bg-primary/10 border-l-4 border-primary' : 'hover:bg-primary/5'}`}>
+                  <tr key={row.idx} className={`transition-colors ${isCurrent ? 'bg-primary/10 border-l-4 border-primary' : isLibrary ? '' : 'hover:bg-primary/5 cursor-pointer'}`}>
                     <td className="py-3 px-4 font-bold text-on-surface-variant/60">{`${row.idx + 1}.`}</td>
-                    <td className="py-3 px-2 text-center font-bold text-on-surface" onClick={() => jumpTo(row.idx * 2)}>{row.red ?? '-'}</td>
-                    <td className="py-3 px-2 text-center font-bold text-on-surface" onClick={() => jumpTo(row.idx * 2 + 1)}>{row.black ?? '-'}</td>
+                    <td className="py-3 px-2 text-center font-bold text-on-surface" onClick={isLibrary ? undefined : () => jumpTo(row.idx * 2)}>{row.red ?? '-'}</td>
+                    <td className="py-3 px-2 text-center font-bold text-on-surface" onClick={isLibrary ? undefined : () => jumpTo(row.idx * 2 + 1)}>{row.black ?? '-'}</td>
                   </tr>
                 );
               })}
@@ -136,7 +87,6 @@ export function MoveListPanel({ variant = 'analysis' }: MoveListPanelProps) {
         )}
       </div>
 
-      {/* Footer */}
       {!isLibrary && (
         <div className="p-4 bg-white dark:bg-slate-900 border-t border-outline-variant/10 grid grid-cols-2 gap-3 shrink-0">
           <button className="py-3 text-sm font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-on-surface rounded-xl transition-all">Phân tích sâu</button>

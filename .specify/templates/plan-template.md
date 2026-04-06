@@ -29,9 +29,17 @@
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-[Gates determined based on constitution file]
+- Principle 1: Analysis screens prioritize variation CRUD and omit evaluation-bar dependency.
+- Principle 2: Plan includes exactly two variation-creation entry points with identical validated
+  NewVariationModal payload behavior.
+- Principle 3: Board control group excludes persistence actions (for example "Luu bien").
+- Principle 4: Variation row edit affordance opens full-info modal with update and delete.
+- Principle 5: Hydration/readiness path is deterministic and blank-page risk is mitigated.
+- Evidence required in plan:
+  - Target files for each principle.
+  - Validation approach (lint + manual render checks on landing and Analysis pages).
 
 ## Project Structure
 
@@ -48,6 +56,7 @@ specs/[###-feature]/
 ```
 
 ### Source Code (repository root)
+
 <!--
   ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
   for this feature. Delete unused options and expand the chosen structure with
@@ -98,7 +107,7 @@ directories captured above]
 
 > **Fill ONLY if Constitution Check has violations that must be justified**
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+| Violation                  | Why Needed         | Simpler Alternative Rejected Because |
+| -------------------------- | ------------------ | ------------------------------------ |
+| [e.g., 4th project]        | [current need]     | [why 3 projects insufficient]        |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient]  |

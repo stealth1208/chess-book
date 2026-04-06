@@ -9,8 +9,6 @@ export function TopNav() {
   const navItems = [
     { label: "Phân tích", path: "/" },
     { label: "Thư viện", path: "/library" },
-    { label: "Mindmap", path: "/mindmap" },
-    { label: "Thực hành", path: "/practice" },
   ];
 
   return (

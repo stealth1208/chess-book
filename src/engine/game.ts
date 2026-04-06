@@ -20,7 +20,8 @@ export const parseMove = (moveStr: string): { from: Coordinate, to: Coordinate }
   };
 };
 
-export const parseFEN = (fen: string): BoardState => {
+export const parseFEN = (_fen: string): BoardState => {
+  void _fen;
   // Stub for now, can implement standard FEN mapping later
   return createInitialBoard();
 };

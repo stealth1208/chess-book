@@ -1,39 +1,43 @@
-# Implementation Plan: Xiangqi Study App — Phase 1 MVP
+# Implementation Plan: Xiangqi Study App Phase 1 (Plan Update)
 
-**Branch**: `001-xiangqi-study-app` | **Date**: 2026-04-01 | **Spec**: [spec.md](./spec.md)  
+**Branch**: `001-xiangqi-study-app` | **Date**: 2026-04-04 | **Spec**: `specs/001-xiangqi-study-app/spec.md`
 **Input**: Feature specification from `/specs/001-xiangqi-study-app/spec.md`
 
 ## Summary
 
-Build a web PWA for studying Xiangqi (Chinese chess) openings. Core capabilities:
-
-- Play moves on an interactive board, save named variations (`initialFen + moves[]`)
-- Organize variations in a folder tree (purely organizational — no semantic relationships between variations)
-- Replay saved variations move-by-move; practice by guessing the next move (wrong → highlight correct, advance, no reset)
-- View a read-only containment-based mindmap derived from the folder/variation tree
-- Guest mode (localforage) with automatic first-signin migration to Supabase
-
-Technical approach: Next.js App Router + Zustand for state; pure engine module decoupled from UI; localforage for Phase 1 guest storage; Supabase PostgreSQL for authenticated storage.
+Deliver a Xiangqi study app focused on two screens: Analysis (variation CRUD and move replay) and Library (read-only variation browsing). Both screens share one `Board` component with an `interactive` mode prop. `TopicView` (renamed from `TopicTreeView`) is a data-connected feature-level component and lives under `src/features/TopicView/` so it can couple directly to the store. Validation/error engine, Practice, Mindmap, and Auth are all deferred.
 
 ## Technical Context
 
-**Language/Version**: TypeScript 5.x, Node.js 20+  
-**Primary Dependencies**: Next.js 15 (App Router), React 19, Mantine 7, Tailwind CSS 4, Zustand 5, localforage, next-pwa  
-**Storage**: localforage / IndexedDB (guest); Supabase PostgreSQL (authenticated)  
-**Testing**: ESLint (lint enforced); Vitest + React Testing Library + Playwright (planned, see research Decision 6)  
-**Target Platform**: Web (Desktop + Mobile browser), PWA-installable  
-**Project Type**: web-app (PWA)  
-**Performance Goals**: <100 variations load with full replay within normal React render budget; mindmap renders ≤100 nodes without layout jank  
-**Constraints**: Offline-capable for guest mode; engine module stays independent of UI; no checkmate detection, no AI, no drag-drop in Phase 1  
-**Scale/Scope**: <100 mindmap nodes, <100 variations per folder, single-user per session
+**Language/Version**: TypeScript 5.x, React 19.2.4, Next.js 16.2.1 (App Router)  
+**Primary Dependencies**: Zustand 5, Mantine 8, localforage 1.10, next-pwa 5.6  
+**Storage**: Local IndexedDB via localforage (guest mode), no cloud sync in this phase  
+**Testing**: ESLint 9 + manual validation checklist  
+**Target Platform**: Desktop + mobile browsers (PWA-ready)  
+**Project Type**: Single Next.js web application  
+**Performance Goals**: Initial route interactive under 2s on dev hardware, smooth board interactions  
+**Constraints**: Offline-capable guest-only mode, deterministic replay from `initialFen + moves[]`, no validation/error handling in this phase, no Auth in this phase  
+**Scale/Scope**: Two active screens (Analysis + Library), local folder/variation management
 
 ## Constitution Check
 
 _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-The project constitution (`/.specify/memory/constitution.md`) contains placeholder template text only — no project-specific principles have been ratified. Therefore no constitution gates apply.
+- Principle 1 PASS: Analysis remains variation-CRUD first and excludes evaluation bar.
+  - Target files: `src/features/analysis/AnalysisScreen.tsx`, `src/features/TopicView/TopicView.tsx`
+- Principle 2 PASS: Exactly two variation-create entry points converge into one modal payload.
+  - Target files: `src/shared/components/InputNotation.tsx`, `src/shared/components/MoveListPanel.tsx`, `src/shared/components/NewVariationModal.tsx`
+- Principle 3 PASS: Board controls remain navigation/play only (no persistence action).
+  - Target files: `src/shared/components/Board/Board.tsx`, `src/features/analysis/AnalysisScreen.tsx`
+- Principle 4 PASS: Variation row edit affordance opens full detail modal (update + delete).
+  - Target files: `src/features/TopicView/TopicView.tsx`, `src/shared/components/NewVariationModal.tsx`
+- Principle 5 PASS: Hydration/readiness path remains deterministic and blank-screen safe.
+  - Target files: `src/shared/store/useGameStore.ts`
 
-**Post-design re-check**: Still no ratified constitution. No violations.
+Validation evidence required:
+
+- `npm run -s lint` passes with 0 errors.
+- Manual render checks pass on landing, Analysis, and Library.
 
 ## Project Structure
 
@@ -41,78 +45,75 @@ The project constitution (`/.specify/memory/constitution.md`) contains placehold
 
 ```text
 specs/001-xiangqi-study-app/
-├── plan.md              # This file
-├── research.md          # Phase 0: technical decisions
-├── data-model.md        # Phase 1: entity definitions and validation rules
-├── quickstart.md        # Phase 1: dev setup and validation checklist
+├── plan.md
+├── research.md
+├── data-model.md
+├── quickstart.md
 ├── contracts/
-│   ├── engine-contract.md   # Engine and practice evaluation interfaces
-│   └── storage-contract.md  # Persistence and sync contracts
-└── tasks.md             # Phase 2 output (separate /speckit.tasks command)
+│   ├── analysis-ui-contract.md
+│   └── board-library-contract.md
+└── tasks.md
 ```
 
 ### Source Code (repository root)
 
 ```text
 src/
-├── app/                          # Next.js App Router pages
-│   ├── layout.tsx                # Root layout (TopNav, AuthBootstrap)
-│   ├── page.tsx                  # Analysis tab (default route)
-│   ├── globals.css
-│   ├── components/               # App-level client components
-│   │   ├── AuthBootstrap.tsx     # Auth subscription + migration trigger
-│   │   ├── InputNotation.tsx     # Move notation input
-│   │   └── NewVariationModal.tsx # Save variation form
-│   ├── library/
-│   │   └── page.tsx              # Library management page
-│   ├── mindmap/
-│   │   ├── page.tsx
-│   │   └── components/
-│   │       ├── MindmapCanvas.tsx       # Containment-based node grid
-│   │       └── MindmapDetailPanel.tsx  # Selected node metadata
-│   └── practice/
-│       ├── page.tsx
-│       └── components/
-│           ├── AccuracyCircle.tsx
-│           ├── ActionButtons.tsx
-│           └── ControlGroups.tsx
-├── components/                   # Shared UI components
-│   ├── MoveListPanel.tsx         # Analysis move list + library variation list
-│   ├── QuickStatsWidget.tsx
-│   ├── TopicTreeView.tsx         # Folder/variation tree (Mantine Tree)
-│   ├── TopNav.tsx
-│   └── Board/
-│       ├── Board.tsx
-│       ├── Piece.tsx
-│       └── Square.tsx
-├── engine/                       # Pure board logic — UI-independent
-│   ├── types.ts                  # Piece, Move, BoardState, Coord
-│   ├── board.ts                  # parseFEN, applyMove, board state
-│   ├── rules.ts                  # validateMove by piece type
-│   ├── game.ts                   # Game session, undo/redo, formatMove
-│   ├── moveNotation.ts           # Canonical move string encode/decode
-│   └── fen.ts                    # FEN serialization/deserialization
-├── features/                     # Domain feature modules
-│   ├── auth/
-│   │   └── supabaseClient.ts     # Auth state (Phase 1: localStorage mock)
-│   ├── errors/
-│   │   └── studyErrors.ts        # Typed errors + user-facing messages (VN)
-│   ├── library/
-│   │   ├── folderService.ts      # Folder CRUD pure helpers (with delete guard)
-│   │   └── variationService.ts   # Variation CRUD pure helpers
-│   ├── mindmap/
-│   │   └── mindmapMapper.ts      # mapStudyToMindmap: folders+variations → graph
-│   ├── practice/
-│   │   └── practiceEvaluator.ts  # evaluatePracticeMove (correct/wrong)
-│   └── storage/
-│       ├── migrationService.ts   # First-signin local→remote idempotent migration
-│       └── remoteRepository.ts   # localforage-backed mock remote (Supabase stub)
-└── store/
-    └── useGameStore.ts           # Central Zustand store (persist middleware)
+├── app/
+│   └── layout.tsx             # Tab switching, Layout shell
+├── shared/
+│   ├── components/
+│   │   ├── Board/             # Shared board (interactive + read-only via prop)
+│   │   ├── InputNotation.tsx  # Notation entry + Xac nhan trigger
+│   │   ├── MoveListPanel.tsx  # Move transcript + save icon trigger
+│   │   └── NewVariationModal.tsx # Unified variation create/edit/delete modal
+│   └── store/
+│       └── useGameStore.ts    # Zustand store: folders, variations, board state
+└── features/
+    ├── TopicView/
+    │   └── TopicView.tsx      # Data-connected folder/variation tree (both screens)
+    ├── analysis/
+    │   └── AnalysisScreen.tsx # Analysis layout: TopicView + Board + input
+    └── library/
+        └── LibraryScreen.tsx  # Library layout: TopicView + Board (read-only)
 ```
 
-**Structure Decision**: Single Next.js full-stack project. No separate backend process — Supabase handles auth/DB. Engine is isolated in `src/engine/` as pure functions with no UI imports. Feature business logic lives in `src/features/` as independent modules. Zustand store in `src/store/` is the single source of truth for all UI state.
+**Structure Decision**: `TopicView` belongs in `src/features/TopicView/` because it directly connects to the Zustand store for CRUD operations. It is consumed by both `AnalysisScreen` and `LibraryScreen` without being generic shared infrastructure. `Board`, `InputNotation`, `MoveListPanel`, and `NewVariationModal` stay in `src/shared/components/` because they carry no data dependencies.
 
-## Complexity Tracking
+## Phase 0: Research
 
-> No constitution violations — no entries required.
+Outcomes already resolved:
+
+- Board `interactive` prop cleanly covers Analysis (true) and Library (false) behavior difference.
+- `TopicView` placed in `features/` because it calls store selectors and CRUD actions directly; importing cross-feature is acceptable since both Analysis and Library are sibling features.
+- Deferred validation does not block replay (engine `applyMove` is already available).
+- Tab switching shares one board state instance via store.
+
+## Phase 1: Design & Contracts
+
+Deliverables completed:
+
+1. `data-model.md`: Folder, Variation, BoardState, VariationDraft, VariationDetailModalState entities
+2. `contracts/board-library-contract.md`: Board component behavior by interactive mode
+3. `contracts/analysis-ui-contract.md`: Analysis layout and CRUD interaction contract
+4. `quickstart.md`: Manual validation checklist for landing, Analysis, Library, and tab switching
+5. Agent context updated via `update-agent-context.sh copilot`
+
+## Phase 2: Implementation & Validation
+
+Implementation sequence:
+
+1. Rename `TopicTreeView` to `TopicView`; move file to `src/features/TopicView/TopicView.tsx`
+2. Update all import paths referencing old name/location
+3. Wire `Board` `interactive` prop for Analysis (true) and Library (false)
+4. Wire Analysis two creation entry points through `NewVariationModal`
+5. Wire Library read-only board display from selected variation
+6. Validate tab switching preserves board state
+7. Run lint; complete manual checklist
+
+Success criteria:
+
+- Analysis: TopicView visible, both creation-entry-points open same modal, edit/delete modal works
+- Library: TopicView visible for browsing, Board is non-interactive
+- Tab switch: Board state survives screen change
+- Lint: 0 errors; manual validation checklist: all items pass

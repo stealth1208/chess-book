@@ -22,7 +22,7 @@ const PIECE_CHARS: Record<string, Record<string, string>> = {
   }
 };
 
-export function Piece({ piece }: { piece: PieceType }) {
+export function Piece({ piece, interactive = true }: { piece: PieceType; interactive?: boolean }) {
   const char = PIECE_CHARS[piece.color][piece.type];
   const color = piece.color === 'red' ? '#c42021' : '#111111';
   
@@ -41,7 +41,7 @@ export function Piece({ piece }: { piece: PieceType }) {
         fontSize: "24px",
         fontWeight: "bold",
         boxShadow: "0 2px 4px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.5)",
-        cursor: "pointer",
+        cursor: interactive ? "pointer" : "default",
         userSelect: "none",
         zIndex: 10
       }}

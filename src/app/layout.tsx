@@ -10,7 +10,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "sw
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Xiangqi Master",
+  title: "Book Cờ tướng",
   description: "Advanced Xiangqi Study App built with Next.js",
 };
 
@@ -25,6 +25,8 @@ export default function RootLayout({
       className={`${inter.variable} ${manrope.variable} h-full antialiased light`}
     >
       <head>
+        {/* Material Symbols is loaded globally from the root layout on purpose. */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
       </head>
       <body className="h-full flex flex-col bg-surface text-on-surface font-body overflow-hidden">

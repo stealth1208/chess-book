@@ -1,7 +1,7 @@
 'use client';
 
 import { useHasHydrated } from "@/shared/store/useGameStore";
-import { TopicTreeView } from "@/shared/components/TopicTreeView";
+import { TopicView } from "@/features/TopicView";
 import { MindmapCanvas } from "./components/MindmapCanvas";
 import { MindmapDetailPanel } from "./components/MindmapDetailPanel";
 import { useMindmapNodeSelection } from "./hooks/useMindmapNodeSelection";
@@ -17,7 +17,7 @@ export function MindmapScreen() {
   return (
     <div className="app-page-shell flex h-[calc(100vh-64px)] w-full bg-background text-on-background overflow-hidden relative">
       <aside className="hidden lg:flex flex-col w-80 bg-slate-100 dark:bg-slate-900 border-r border-outline-variant/30 py-4 font-headline text-sm h-full overflow-hidden">
-        <TopicTreeView />
+        <TopicView />
       </aside>
 
       <MindmapCanvas

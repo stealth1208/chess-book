@@ -1,90 +1,121 @@
-# Data Model: Xiangqi Study App Phase 1
+# Data Model: Xiangqi Study App Phase 1 (Revised)
 
 ## 1) Folder
 
 - Purpose: Organize variations in a hierarchical tree. **Purely organizational — no semantic relationship between variations based on folder placement.**
 - Fields:
   - id: string (UUID)
-  - userId: string | null (null for local guest data before migration)
   - name: string
   - parentId: string | null
   - createdAt: string (ISO timestamp)
   - updatedAt: string (ISO timestamp)
-- Validation rules:
+- Constraints:
   - `name` is required, trimmed, length 1..80
   - `parentId` must reference an existing folder or be null
   - No cyclic ancestry allowed
-- Delete constraint: **Blocked** if the folder has any direct child folders or any variations with `folderId === this.id`. User must empty the folder before deleting it.
+  - **Delete blocked** if folder has direct children (folders or variations); must empty before delete
 - Relationships:
-  - One folder has many child folders (parent-child by `parentId`)
-  - One folder has many variations (direct children only — `folderId === folder.id`; no recursive traversal implied)
+  - One folder → many child folders (by `parentId`)
+  - One folder → many variations (direct children only; no recursive inclusion)
 
 ## 2) Variation
 
-- Purpose: Store replayable opening lines.
+- Purpose: Store replayable opening lines with deterministic replay from FEN + moves.
 - Fields:
   - id: string (UUID)
-  - userId: string | null
   - folderId: string | null
   - name: string
   - initialFen: string
-  - moves: string[]
+  - moves: string[] (e.g., `["a0a1", "h9g7", ...]`)
   - createdAt: string (ISO timestamp)
   - updatedAt: string (ISO timestamp)
-- Validation rules:
-  - `name` is required, length 1..120
-  - `initialFen` must parse as valid Xiangqi FEN
-  - Each `moves[i]` must match coordinate format `^[a-i][0-9][a-i][0-9]$`
-  - `folderId` must reference existing folder or be null
+- Constraints:
+  - `name` required, length 1..120
+  - `initialFen` must be parseable as valid Xiangqi FEN
+  - Each `moves[i]` matches `^[a-i][0-9][a-i][0-9]$` (coordinate format)
+  - `folderId` references existing folder or null
+  - No validation engine: accept all move input; replay deterministically via `applyMove()`
 - Relationships:
-  - Many variations belong to one folder (optional)
+  - Many variations → one folder (optional)
 
-## 3) PracticeAttempt (ephemeral/session)
+## 2.1) VariationDraft (UI transient, Phase 1 only)
 
-- Purpose: Track current practice run against one variation.
+- Purpose: Shared intermediate state for both variation-creation entry points (notation confirm + move-list save).
+- Fields:
+  - name: string
+  - initialFen: string
+  - moves: string[]
+  - folderId: string | null (optional folder for new variation)
+  - source: "notation-confirm" | "movelist-save"
+- Rules:
+  - Both entry points generate semantically equivalent draft payload for the same board state
+  - Draft persists as Variation entity on confirm
+  - `source` field is analytics-only; not persisted in final Variation
+
+## 2.2) VariationDetailModalState (UI transient, Phase 1 only)
+
+- Purpose: Drive variation edit/delete modal UI behavior.
 - Fields:
   - variationId: string
-  - expectedMoves: string[]
-  - currentIndex: number
-  - correctCount: number
-  - wrongCount: number
-  - startedAt: string
-  - finishedAt: string | null
-- Validation rules:
-  - `currentIndex` range: 0..expectedMoves.length
-  - `correctCount + wrongCount` >= currentIndex
-- State transitions:
-  - `idle -> active` on start practice
-  - `active -> active` on correct move (index +1, correctCount +1)
-  - `active -> active` on wrong move (wrongCount +1, correct move highlighted on board, then index +1 — no board reset, no return to start)
-  - `active -> completed` when currentIndex == expectedMoves.length
+  - isOpen: boolean
+  - mode: "view" | "edit"
+  - pendingName: string (for edit input)
+- State machine:
+  - `closed → open(view)` on TopicView edit-icon click
+  - `open(view) → open(edit)` on "rename" action
+  - `open(*) → closed` on cancel, confirm, or delete success
 
-## 4) MoveRecord (engine-level value object)
+## 3) BoardState (UI transient, shared between Analysis and Library)
 
-- Purpose: Normalized in-memory move shape used by replay list and board actions.
+- Purpose: Current board position, move history, and navigation state during a session.
+- Fields:
+  - variationId: string | null (currently loaded variation)
+  - initialFen: string
+  - moves: string[] (replayed moves from variation)
+  - currentMoveIndex: number (0..moves.length; 0 = initial position)
+  - interactive: boolean (true in Analysis; false in Library)
+- Behavior:
+  - Select variation in Analysis or Library → load variation's initialFen + moves → reset currentMoveIndex to `moves.length`
+  - Click a move in transcript → jump to that index
+  - In Analysis: drag piece → validate (if rules ready) → apply move → append to moves
+  - In Library: click/drag piece → ignore (read-only mode)
+  - Undo/Redo only available in Analysis (`interactive=true`)
+
+## 4) MoveRecord (engine value object)
+
+- Purpose: Normalized in-memory shape for move display and validation.
 - Fields:
   - from: { x: number, y: number }
   - to: { x: number, y: number }
   - pieceType: "king" | "advisor" | "elephant" | "horse" | "rook" | "cannon" | "pawn"
   - color: "red" | "black"
-- Validation rules:
-  - Coordinates remain inside board bounds (x: 0..8, y: 0..9)
+- Constraints:
+  - Coordinates within board bounds (x: 0..8, y: 0..9)
 
-## 5) MigrationJob (one-time logical process)
+## Deferred Entities (Phase 2+)
 
-- Purpose: Capture local-to-cloud sync status on first sign-in.
-- Fields:
-  - userId: string
-  - localFolderCount: number
-  - localVariationCount: number
-  - migratedAt: string
-  - status: "success" | "partial" | "failed"
-- Rules:
-  - Triggered once on first authenticated session where local data exists
-  - Success writes remote records and clears/marks local cache as migrated
+The following entities are **out of scope** for Phase 1:
 
-## Indexing and Query Notes
+- **PracticeAttempt**: Practice mode deferred to Phase 3+
+- **MigrationJob**: Auth and user-mode sync deferred to Phase 3+
+- **Validation models**: Validation engine deferred to Phase 2+
 
-- Folders: index by (userId, parentId)
-- Variations: index by (userId, folderId), (userId, updatedAt desc)
-- For local cache, maintain sorted query helpers equivalent to above indices
+## Indexing and Query Strategy
+
+**Local Storage** (guest mode, Phase 1):
+
+- Folders: sorted by `parentId`, then `name`
+- Variations: sorted by `folderId`, then `updatedAt` (descending)
+- Query helpers in `useGameStore()`:
+  - `foldersByParentId(parentId)` → Folder[]
+  - `variationsByFolderId(folderId)` → Variation[]
+  - `getFolder(id)` → Folder | undefined
+  - `getVariation(id)` → Variation | undefined
+
+## Constraints from Phase 1 Scope
+
+- **No validation engine**: Accept all moves without rule enforcement; replay deterministically via `applyMove()`
+- **No Auth**: All data is ephemeral to session; no userId field in Phase 1 entities
+- **No Practice**: PracticeAttempt deferred; scoring/attempt history not tracked
+- **No Mindmap**: Derived view deferred; no mindmap-specific data structures needed
+- **Unified Board**: Single BoardState instance shared between Analysis and Library via `interactive` prop

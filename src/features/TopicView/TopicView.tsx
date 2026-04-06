@@ -1,8 +1,14 @@
-import { ActionIcon, Badge, Group, Text, Tree, TreeNodeData } from '@mantine/core';
-import { useMemo } from 'react';
+'use client';
+
+import { ActionIcon, Badge, Group, Text, Tree, getTreeExpandedState, type TreeNodeData, useTree } from '@mantine/core';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useFolderTreeActions } from '@/features/library/hooks/useFolderTreeActions';
 
-export function TopicTreeView() {
+interface TopicViewProps {
+  onEditVariation?: (variationId: string) => void;
+}
+
+export function TopicView({ onEditVariation }: TopicViewProps) {
   const {
     folders,
     variations,
@@ -44,7 +50,7 @@ export function TopicTreeView() {
     return map;
   }, [variations]);
 
-  const buildTree = (folderId: string | null, depth = 0, visited: Set<string> = new Set()): TreeNodeData[] => {
+  const buildTree = useCallback((folderId: string | null, depth = 0, visited: Set<string> = new Set()): TreeNodeData[] => {
     const list = childFolders.get(folderId) ?? [];
 
     return list.flatMap((folder) => {
@@ -71,17 +77,17 @@ export function TopicTreeView() {
         },
       ];
     });
-  };
+  }, [childFolders, variationsByFolder]);
 
   const treeData = useMemo<TreeNodeData[]>(() => {
     const data = buildTree(null);
-    const unassignedVariations = variationsByFolder.get(null) ?? [];
+    const rootVariations = variationsByFolder.get(null) ?? [];
 
-    if (unassignedVariations.length > 0) {
+    if (rootVariations.length > 0) {
       data.push({
         value: 'folder:__unassigned__',
         label: 'Khong thu muc',
-        children: unassignedVariations.map((variation) => ({
+        children: rootVariations.map((variation) => ({
           value: `variation:${variation.id}`,
           label: variation.name,
         })),
@@ -89,7 +95,19 @@ export function TopicTreeView() {
     }
 
     return data;
-  }, [folders, variations, childFolders, variationsByFolder]);
+  }, [buildTree, variationsByFolder]);
+
+  const tree = useTree();
+  const didInitExpand = useRef(false);
+
+  useEffect(() => {
+    if (didInitExpand.current || treeData.length === 0) {
+      return;
+    }
+
+    tree.setExpandedState(getTreeExpandedState(treeData, '*'));
+    didInitExpand.current = true;
+  }, [tree, treeData]);
 
   const onNodeClick = (value: string) => {
     if (value.startsWith('folder:')) {
@@ -102,37 +120,43 @@ export function TopicTreeView() {
       loadVariationById(value.slice('variation:'.length));
     }
   };
+console.log('treeData', treeData);
 
   return (
-    <>
-      <div className="p-6 border-b border-outline-variant/10 shrink-0">
-        <h2 className="font-headline font-bold text-xl text-on-surface mb-1">Lộ trình khai cuộc</h2>
-        <p className="text-sm text-on-surface-variant">Pháo Đầu đối Bình Phong Mã</p>
+    <section className="flex h-full flex-col overflow-hidden bg-surface-container-low">
+      <div className="shrink-0 border-b border-outline-variant/10 p-5">
+        <h2 className="font-headline text-xl font-bold text-on-surface">Lộ trình khai cuộc</h2>
+        <p className="mt-1 text-sm text-on-surface-variant">Thư mục và biến được đồng bộ từ bộ nhớ cục bộ.</p>
         <div className="mt-3 flex gap-2">
           <button
-            className="rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-on-primary"
+            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary"
             onClick={() => {
               const name = promptFolderName();
-              if (name) createFolder(name, selectedFolderId ?? null);
+              if (name) {
+                createFolder(name, selectedFolderId ?? null);
+              }
             }}
           >
             + Thu muc
           </button>
         </div>
       </div>
-      <nav className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+
+      <nav className="custom-scrollbar flex-1 overflow-y-auto p-4">
         {treeData.length === 0 ? (
-          <p className="px-2 py-4 text-sm text-on-surface-variant">Chua co thu muc.</p>
+          <p className="px-2 py-4 text-sm text-on-surface-variant">Chua co thu muc hoac bien nao.</p>
         ) : (
           <Tree
             data={treeData}
+            tree={tree}
             levelOffset="md"
             renderNode={({ node, elementProps, hasChildren }) => {
               const value = String(node.value);
               const isFolder = value.startsWith('folder:');
               const folderId = isFolder ? value.slice('folder:'.length) : null;
+              const variationId = value.startsWith('variation:') ? value.slice('variation:'.length) : null;
               const isSelectedFolder = isFolder && ((folderId === '__unassigned__' && selectedFolderId === null) || selectedFolderId === folderId);
-              const isSelectedVariation = value.startsWith('variation:') && selectedVariationId === value.slice('variation:'.length);
+              const isSelectedVariation = Boolean(variationId) && selectedVariationId === variationId;
 
               return (
                 <div
@@ -146,7 +170,7 @@ export function TopicTreeView() {
                       ? 'bg-primary/10 text-primary'
                       : isSelectedVariation
                         ? 'bg-tertiary/15 text-tertiary'
-                        : 'hover:bg-surface-container-high text-on-surface'
+                        : 'text-on-surface hover:bg-surface-container-high'
                   } ${elementProps.className}`}
                 >
                   <span className="material-symbols-outlined text-base">
@@ -158,7 +182,9 @@ export function TopicTreeView() {
                       {node.label}
                     </Text>
                     {!isFolder && (
-                      <Badge size="xs" variant="light" color="teal">Line</Badge>
+                      <Badge size="xs" variant="light" color="teal">
+                        Line
+                      </Badge>
                     )}
                   </Group>
 
@@ -169,7 +195,9 @@ export function TopicTreeView() {
                         size="sm"
                         onClick={() => {
                           const nextName = promptFolderName(String(node.label));
-                          if (nextName && folderId) renameFolder(folderId, nextName);
+                          if (nextName && folderId) {
+                            renameFolder(folderId, nextName);
+                          }
                         }}
                       >
                         <span className="material-symbols-outlined text-sm">edit</span>
@@ -179,12 +207,27 @@ export function TopicTreeView() {
                         color="red"
                         size="sm"
                         onClick={() => {
-                          if (folderId) tryDeleteFolder(folderId);
+                          if (folderId) {
+                            tryDeleteFolder(folderId);
+                          }
                         }}
                       >
                         <span className="material-symbols-outlined text-sm">delete</span>
                       </ActionIcon>
                     </Group>
+                  )}
+
+                  {!isFolder && variationId && onEditVariation && (
+                    <ActionIcon
+                      variant="subtle"
+                      size="sm"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onEditVariation(variationId);
+                      }}
+                    >
+                      <span className="material-symbols-outlined text-sm">edit</span>
+                    </ActionIcon>
                   )}
                 </div>
               );
@@ -192,17 +235,6 @@ export function TopicTreeView() {
           />
         )}
       </nav>
-      <div className="p-4 mt-auto shrink-0">
-        <div className="bg-surface-container-lowest p-4 rounded-xl shadow-sm border border-outline-variant/10">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center">
-              <span className="material-symbols-outlined text-primary text-sm">auto_awesome</span>
-            </div>
-            <span className="text-xs font-bold text-on-surface">Gợi ý từ AI</span>
-          </div>
-          <p className="text-[11px] text-on-surface-variant leading-relaxed">Nghiên cứu biến &quot;M2.3&quot; để đối phó với thế trận này hiệu quả hơn.</p>
-        </div>
-      </div>
-    </>
+    </section>
   );
 }
