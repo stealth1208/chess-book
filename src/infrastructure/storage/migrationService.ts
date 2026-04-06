@@ -1,6 +1,6 @@
 import { localRepository } from '@/infrastructure/storage/localRepository';
 import { remoteRepository } from '@/infrastructure/storage/remoteRepository';
-import type { MigrationStatus } from '@/shared/study/types/study';
+import type { MigrationStatus } from '@/shared/chessBook/types/chessBook';
 
 const MIGRATION_PREFIX = 'xiangqi.study.migrated';
 

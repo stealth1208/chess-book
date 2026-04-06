@@ -1,5 +1,5 @@
-import type { Folder } from "@/shared/study/types/study";
-import { validateFolder } from "@/shared/study/validation/studyValidators";
+import type { Folder } from "@/shared/chessBook/types/chessBook";
+import { validateFolder } from "@/shared/chessBook/validation/chessBookValidators";
 
 function nowIso(): string {
   return new Date().toISOString();

@@ -1,9 +1,9 @@
 import { localRepository } from "@/infrastructure/storage/localRepository";
 import { loadRemoteSnapshot, remoteRepository } from "@/infrastructure/storage/remoteRepository";
-import type { Folder, StudySnapshot, StudyStorageMode, Variation } from "@/shared/study/types/study";
+import type { ChessBookSnapshot, ChessBookStorageMode, Folder, Variation } from "@/shared/chessBook/types/chessBook";
 
-class StudyStorageService {
-  private mode: StudyStorageMode = "guest";
+class ChessBookStorageService {
+  private mode: ChessBookStorageMode = "guest";
   private userId: string | null = null;
 
   setGuestMode(): void {
@@ -16,7 +16,7 @@ class StudyStorageService {
     this.userId = userId;
   }
 
-  async loadSnapshot(): Promise<StudySnapshot> {
+  async loadSnapshot(): Promise<ChessBookSnapshot> {
     if (this.mode === "guest" || !this.userId) {
       return localRepository.loadSnapshot();
     }
@@ -43,4 +43,4 @@ class StudyStorageService {
   }
 }
 
-export const studyStorageService = new StudyStorageService();
+export const chessBookStorageService = new ChessBookStorageService();

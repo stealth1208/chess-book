@@ -2,12 +2,12 @@
 
 import { ReactNode } from 'react';
 
-type StudyLoadingBoundaryProps = {
+type ChessBookLoadingBoundaryProps = {
   isReady: boolean;
   children: ReactNode;
 };
 
-export function StudyLoadingBoundary({ isReady, children }: StudyLoadingBoundaryProps) {
+export function ChessBookLoadingBoundary({ isReady, children }: ChessBookLoadingBoundaryProps) {
   if (!isReady) {
     return null;
   }

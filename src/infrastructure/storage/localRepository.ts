@@ -1,6 +1,6 @@
 import localforage from "localforage";
 import { STORAGE_KEYS } from "@/infrastructure/storage/keys";
-import type { Folder, StudySnapshot, Variation } from "@/shared/study/types/study";
+import type { ChessBookSnapshot, Folder, Variation } from "@/shared/chessBook/types/chessBook";
 
 async function read<T>(key: string): Promise<T[]> {
   return (await localforage.getItem<T[]>(key)) ?? [];
@@ -27,7 +27,7 @@ export const localRepository = {
     await write<Variation>(STORAGE_KEYS.variations, variations);
   },
 
-  async loadSnapshot(): Promise<StudySnapshot> {
+  async loadSnapshot(): Promise<ChessBookSnapshot> {
     const [folders, variations] = await Promise.all([
       this.listFolders(),
       this.listVariations(),

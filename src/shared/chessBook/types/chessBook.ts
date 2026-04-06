@@ -28,9 +28,9 @@ export type MigrationJob = {
   status: MigrationStatus;
 };
 
-export type StudySnapshot = {
+export type ChessBookSnapshot = {
   folders: Folder[];
   variations: Variation[];
 };
 
-export type StudyStorageMode = "guest" | "user";
+export type ChessBookStorageMode = "guest" | "user";

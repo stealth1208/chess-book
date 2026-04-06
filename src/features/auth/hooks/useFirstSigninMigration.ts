@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react';
 import { migrateGuestDataOnFirstSignIn } from '@/infrastructure/storage/migrationService';
-import { handleMigrationFailure } from '@/shared/study/errors/studyErrors';
+import { handleMigrationFailure } from '@/shared/chessBook/errors/chessBookErrors';
 
 export function useFirstSigninMigration() {
   const runMigration = useCallback(async (userId: string | null) => {

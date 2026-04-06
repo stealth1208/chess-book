@@ -1,1 +1,0 @@
-export { PracticeScreen } from './PracticeScreen';

@@ -1,4 +1,4 @@
-export type StudyErrorCode =
+export type ChessBookErrorCode =
   | "VALIDATION"
   | "LOCAL_READ"
   | "LOCAL_WRITE"
@@ -6,13 +6,13 @@ export type StudyErrorCode =
   | "MIGRATION"
   | "MALFORMED_REPLAY";
 
-export type StudyError = {
-  code: StudyErrorCode;
+export type ChessBookError = {
+  code: ChessBookErrorCode;
   message: string;
   cause?: unknown;
 };
 
-export function createStudyError(code: StudyErrorCode, message: string, cause?: unknown): StudyError {
+export function createChessBookError(code: ChessBookErrorCode, message: string, cause?: unknown): ChessBookError {
   return { code, message, cause };
 }
 
@@ -48,11 +48,11 @@ export function toUserMessage(error: unknown): string {
 }
 
 export function handleMigrationFailure(cause?: unknown): string {
-  const error = createStudyError("MIGRATION", "Guest data migration failed", cause);
+  const error = createChessBookError("MIGRATION", "Guest data migration failed", cause);
   return toUserMessage(error);
 }
 
 export function handleMalformedReplayFailure(cause?: unknown): string {
-  const error = createStudyError("MALFORMED_REPLAY", "Malformed variation replay", cause);
+  const error = createChessBookError("MALFORMED_REPLAY", "Malformed variation replay", cause);
   return toUserMessage(error);
 }

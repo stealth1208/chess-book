@@ -1,5 +1,5 @@
-import type { Variation } from "@/shared/study/types/study";
-import { validateVariation } from "@/shared/study/validation/studyValidators";
+import type { Variation } from "@/shared/chessBook/types/chessBook";
+import { validateVariation } from "@/shared/chessBook/validation/chessBookValidators";
 
 function nowIso(): string {
   return new Date().toISOString();

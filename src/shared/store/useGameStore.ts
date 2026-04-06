@@ -5,13 +5,11 @@ import { persist } from 'zustand/middleware';
 import { BoardState, Move } from '@/engine/types';
 import { createInitialBoard } from '@/engine/board';
 import { formatMove, parseMove, parseFEN } from '@/engine/game';
-import { createFolderItem, deleteFolderItem, renameFolderItem } from '@/features/library/services/folderService';
-import { createVariationItem, deleteVariationItem, deleteVariationsByFolderIds, moveVariationToFolderItem, renameVariationItem } from '@/features/library/services/variationService';
-import { mapStudyToMindmap, MindmapGraph } from '@/features/mindmap/mindmapMapper';
-import { evaluatePracticeMove } from '@/features/practice/practiceEvaluator';
-import { studyStorageService } from '@/infrastructure/storage/studyStorageService';
-import type { Folder, Variation } from '@/shared/study/types/study';
-import { handleMalformedReplayFailure } from '@/shared/study/errors/studyErrors';
+import { chessBookStorageService } from '@/infrastructure/storage/chessBookStorageService';
+import type { Folder, Variation } from '@/shared/chessBook/types/chessBook';
+import { handleMalformedReplayFailure } from '@/shared/chessBook/errors/chessBookErrors';
+import { createFolderItem, deleteFolderItem, renameFolderItem } from '@/shared/store/services/folderService';
+import { createVariationItem, deleteVariationItem, deleteVariationsByFolderIds, moveVariationToFolderItem, renameVariationItem } from '@/shared/store/services/variationService';
 import { useState, useEffect } from 'react';
 
 interface GameStore {
@@ -23,12 +21,6 @@ interface GameStore {
   variations: Variation[];
   selectedFolderId: string | null;
   selectedVariationId: string | null;
-  practiceVariationId: string | null;
-  practiceExpectedMoves: string[];
-  practiceIndex: number;
-  practiceCorrect: number;
-  practiceWrong: number;
-  selectedMindmapNodeId: string | null;
   authUserId: string | null;
 
   // Actions
@@ -47,11 +39,6 @@ interface GameStore {
   renameVariation: (variationId: string, name: string) => void;
   deleteVariation: (variationId: string) => void;
   moveVariationToFolder: (variationId: string, folderId: string | null) => void;
-  startPractice: (variationId: string) => void;
-  submitPracticeMove: (moveString: string) => 'correct' | 'wrong' | 'invalid';
-  resetPractice: () => void;
-  selectMindmapNode: (nodeId: string | null) => void;
-  getMindmapGraph: () => MindmapGraph;
   setAuthUser: (userId: string | null) => void;
   syncLibraryFromStorage: () => Promise<void>;
 }
@@ -99,24 +86,6 @@ const rebuildBoard = (initialFen: string, moves: string[], currentIndex: number)
   return rebuilt;
 };
 
-let cachedMindmapSignature = '';
-let cachedMindmapGraph: MindmapGraph = { nodes: [], edges: [] };
-
-const getMemoizedMindmap = (folders: Folder[], variations: Variation[]): MindmapGraph => {
-  const signature = JSON.stringify({
-    f: folders.map((folder) => [folder.id, folder.parentId, folder.name, folder.updatedAt]),
-    v: variations.map((variation) => [variation.id, variation.folderId, variation.name, variation.updatedAt, variation.moves.length]),
-  });
-
-  if (signature === cachedMindmapSignature) {
-    return cachedMindmapGraph;
-  }
-
-  cachedMindmapSignature = signature;
-  cachedMindmapGraph = mapStudyToMindmap(folders, variations);
-  return cachedMindmapGraph;
-};
-
 export const useGameStore = create<GameStore>()(
   persist(
     (set, get) => ({
@@ -125,12 +94,6 @@ export const useGameStore = create<GameStore>()(
       board: createInitialBoard(),
       moves: [],
       currentIndex: -1,
-      practiceVariationId: null,
-      practiceExpectedMoves: [],
-      practiceIndex: 0,
-      practiceCorrect: 0,
-      practiceWrong: 0,
-      selectedMindmapNodeId: null,
       authUserId: null,
 
       loadVariation: (initialFen, moves) => {
@@ -222,14 +185,14 @@ export const useGameStore = create<GameStore>()(
         set((state) => ({
           folders: [...state.folders, createFolderItem(name, parentId)],
         }));
-        studyStorageService.saveFolders(get().folders).catch(console.error);
+        chessBookStorageService.saveFolders(get().folders).catch(console.error);
       },
 
       renameFolder: (folderId, name) => {
         set((state) => ({
           folders: renameFolderItem(state.folders, folderId, name),
         }));
-        studyStorageService.saveFolders(get().folders).catch(console.error);
+        chessBookStorageService.saveFolders(get().folders).catch(console.error);
       },
 
       deleteFolder: (folderId) => {
@@ -259,8 +222,8 @@ export const useGameStore = create<GameStore>()(
             selectedVariationId: nextSelectedVariationId,
           };
         });
-        studyStorageService.saveFolders(get().folders).catch(console.error);
-        studyStorageService.saveVariations(get().variations).catch(console.error);
+        chessBookStorageService.saveFolders(get().folders).catch(console.error);
+        chessBookStorageService.saveVariations(get().variations).catch(console.error);
       },
 
       selectFolder: (folderId) => {
@@ -275,21 +238,20 @@ export const useGameStore = create<GameStore>()(
             moves: state.moves,
             folderId,
           });
-console.log('state.variations', { variations: state.variations, nextVariation});
 
           return {
             variations: [...state.variations, nextVariation],
             selectedVariationId: nextVariation.id,
           };
         });
-        studyStorageService.saveVariations(get().variations).catch(console.error);
+        chessBookStorageService.saveVariations(get().variations).catch(console.error);
       },
 
       renameVariation: (variationId, name) => {
         set((state) => ({
           variations: renameVariationItem(state.variations, variationId, name),
         }));
-        studyStorageService.saveVariations(get().variations).catch(console.error);
+        chessBookStorageService.saveVariations(get().variations).catch(console.error);
       },
 
       deleteVariation: (variationId) => {
@@ -297,79 +259,14 @@ console.log('state.variations', { variations: state.variations, nextVariation});
           variations: deleteVariationItem(state.variations, variationId),
           selectedVariationId: state.selectedVariationId === variationId ? null : state.selectedVariationId,
         }));
-        studyStorageService.saveVariations(get().variations).catch(console.error);
+        chessBookStorageService.saveVariations(get().variations).catch(console.error);
       },
 
       moveVariationToFolder: (variationId, folderId) => {
         set((state) => ({
           variations: moveVariationToFolderItem(state.variations, variationId, folderId),
         }));
-        studyStorageService.saveVariations(get().variations).catch(console.error);
-      },
-
-      startPractice: (variationId) => {
-        const variation = get().variations.find((item) => item.id === variationId);
-        if (!variation) {
-          return;
-        }
-
-        set({
-          practiceVariationId: variation.id,
-          practiceExpectedMoves: [...variation.moves],
-          practiceIndex: 0,
-          practiceCorrect: 0,
-          practiceWrong: 0,
-          selectedVariationId: variation.id,
-        });
-
-        get().loadVariation(variation.initialFen, []);
-      },
-
-      submitPracticeMove: (moveString) => {
-        const state = get();
-        const expectedMove = state.practiceExpectedMoves[state.practiceIndex];
-
-        if (!expectedMove) {
-          return 'invalid';
-        }
-
-        if (evaluatePracticeMove(moveString, expectedMove) === 'correct') {
-          get().applyMove(moveString);
-          set((current) => ({
-            practiceIndex: current.practiceIndex + 1,
-            practiceCorrect: current.practiceCorrect + 1,
-          }));
-          return 'correct';
-        }
-
-        // Wrong answer: reveal the expected move and continue to the next step.
-        get().applyMove(expectedMove);
-        set((current) => ({
-          practiceWrong: current.practiceWrong + 1,
-          practiceIndex: current.practiceIndex + 1,
-        }));
-
-        return 'wrong';
-      },
-
-      resetPractice: () => {
-        set((state) => ({
-          practiceIndex: 0,
-          practiceCorrect: 0,
-          practiceWrong: 0,
-          moves: [],
-          currentIndex: -1,
-          board: rebuildBoard(state.initialFen, [], -1),
-        }));
-      },
-
-      selectMindmapNode: (nodeId) => {
-        set({ selectedMindmapNodeId: nodeId });
-      },
-
-      getMindmapGraph: () => {
-        const state = get();
-        return getMemoizedMindmap(state.folders, state.variations);
+        chessBookStorageService.saveVariations(get().variations).catch(console.error);
       },
 
       setAuthUser: (userId) => {
@@ -378,20 +275,20 @@ console.log('state.variations', { variations: state.variations, nextVariation});
         }
 
         if (userId) {
-          studyStorageService.setUserMode(userId);
+          chessBookStorageService.setUserMode(userId);
         } else {
-          studyStorageService.setGuestMode();
+          chessBookStorageService.setGuestMode();
         }
 
         set({ authUserId: userId });
       },
 
       syncLibraryFromStorage: async () => {
-        const snapshot = await studyStorageService.loadSnapshot();
+        const snapshot = await chessBookStorageService.loadSnapshot();
         const currentState = get();
         if (snapshot.folders.length === 0 && currentState.folders.length > 0) {
-          await studyStorageService.saveFolders(currentState.folders).catch(console.error);
-          await studyStorageService.saveVariations(currentState.variations).catch(console.error);
+          await chessBookStorageService.saveFolders(currentState.folders).catch(console.error);
+          await chessBookStorageService.saveVariations(currentState.variations).catch(console.error);
           return;
         }
 

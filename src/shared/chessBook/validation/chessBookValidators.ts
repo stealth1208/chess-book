@@ -1,4 +1,4 @@
-import type { Folder, Variation } from "@/shared/study/types/study";
+import type { Folder, Variation } from "@/shared/chessBook/types/chessBook";
 
 const MOVE_RE = /^[a-i][0-9][a-i][0-9]$/;
 

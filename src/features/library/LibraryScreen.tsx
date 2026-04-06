@@ -5,7 +5,7 @@ import { useGameStore, useHasHydrated } from "@/shared/store/useGameStore";
 import { Board } from "@/shared/components/Board/Board";
 import { MoveListPanel } from "@/shared/components/MoveListPanel";
 import { NewVariationModal } from "@/shared/components/NewVariationModal";
-import { StudyLoadingBoundary } from "@/shared/components/StudyLoadingBoundary";
+import { ChessBookLoadingBoundary } from "@/shared/components/ChessBookLoadingBoundary";
 import { TopicView } from "@/features/TopicView";
 
 type ModalState = {
@@ -33,7 +33,7 @@ export function LibraryScreen() {
   );
 
   return (
-    <StudyLoadingBoundary isReady={hydrated}>
+    <ChessBookLoadingBoundary isReady={hydrated}>
       <div className="app-page-shell flex h-full w-full flex-col overflow-hidden bg-surface text-on-surface xl:flex-row">
         <aside className="order-1 flex w-full shrink-0 flex-col border-t border-outline-variant/20 bg-white xl:order-1 xl:w-[380px] xl:border-r xl:border-t-0 dark:bg-slate-900">
           <div className="min-h-[280px] flex-1 xl:min-h-0 xl:flex-[1.2]">
@@ -109,6 +109,6 @@ export function LibraryScreen() {
           }}
         />
       </div>
-    </StudyLoadingBoundary>
+    </ChessBookLoadingBoundary>
   );
 }

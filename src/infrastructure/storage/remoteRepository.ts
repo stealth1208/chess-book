@@ -1,5 +1,5 @@
 import localforage from 'localforage';
-import type { Folder, StudySnapshot, Variation } from '@/shared/study/types/study';
+import type { ChessBookSnapshot, Folder, Variation } from '@/shared/chessBook/types/chessBook';
 
 export interface RemoteRepository {
   listFolders(userId: string): Promise<Folder[]>;
@@ -49,7 +49,7 @@ export const remoteRepository: RemoteRepository = {
   },
 };
 
-export async function loadRemoteSnapshot(userId: string): Promise<StudySnapshot> {
+export async function loadRemoteSnapshot(userId: string): Promise<ChessBookSnapshot> {
   const [folders, variations] = await Promise.all([
     remoteRepository.listFolders(userId),
     remoteRepository.listVariations(userId),
