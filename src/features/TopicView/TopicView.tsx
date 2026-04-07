@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { ActionIcon, Badge, Group, Text, Tree, getTreeExpandedState, type TreeNodeData, useTree } from '@mantine/core';
 import { useFolderTreeActions } from '@/features/library/hooks/useFolderTreeActions';
+import { useGameStore } from '@/shared/store/useGameStore';
+import { useTopicStore } from '@/shared/store/useTopicStore';
 
 interface TopicViewProps {
   onEditVariation?: (variationId: string) => void;
@@ -40,9 +42,12 @@ export const TopicView = ({ onEditVariation }: TopicViewProps) => {
     expandedFolderIds,
     setExpandedFolderIds,
     expandFolderPath,
-    loadVariationById,
+    selectVariationById,
     promptFolderName,
   } = useFolderTreeActions();
+
+  const { loadVariation } = useGameStore();
+  const topicStore = useTopicStore();
 
   const tree = useTree();
   const nodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -163,7 +168,14 @@ export const TopicView = ({ onEditVariation }: TopicViewProps) => {
     }
 
     if (value.startsWith(VARIATION_PREFIX)) {
-      loadVariationById(value.slice(VARIATION_PREFIX.length));
+      const variationId = value.slice(VARIATION_PREFIX.length);
+      const variation = topicStore.variations.find((v) => v.id === variationId);
+      
+      selectVariationById(variationId);
+      
+      if (variation) {
+        loadVariation(variation.initialFen, variation.moves);
+      }
     }
   };
 

@@ -1,6 +1,6 @@
 import { Text, Tree, getTreeExpandedState, type TreeNodeData, useTree } from '@mantine/core';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useGameStore } from '@/shared/store/useGameStore';
+import { useTopicStore } from '@/shared/store/useTopicStore';
 
 interface NewVariationModalProps {
   isOpen?: boolean;
@@ -35,8 +35,7 @@ export function NewVariationModal({
     expandFolderPath,
     createFolder,
     renameFolder,
-    saveCurrentVariation,
-  } = useGameStore();
+  } = useTopicStore();
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
   const [folderId, setFolderId] = useState<string | null>(initialFolderId ?? selectedFolderId ?? null);
@@ -152,8 +151,6 @@ export function NewVariationModal({
     const finalName = name.trim() || `Bien moi ${new Date().toLocaleTimeString()}`;
     if (onSubmit) {
       onSubmit({ name: finalName, description, folderId });
-    } else {
-      saveCurrentVariation(finalName, folderId);
     }
     setName('');
     setDescription('');

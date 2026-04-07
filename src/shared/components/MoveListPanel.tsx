@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useGameStore } from '@/shared/store/useGameStore';
+import { useTopicStore } from '@/shared/store/useTopicStore';
 
 interface MoveListPanelProps {
   variant?: 'analysis' | 'library';
@@ -12,9 +13,11 @@ export function MoveListPanel({ variant = 'analysis', onSaveVariation }: MoveLis
     moves,
     currentIndex,
     jumpTo,
+  } = useGameStore();
+  const {
     variations,
     selectedVariationId,
-  } = useGameStore();
+  } = useTopicStore();
 
   const activeVariation = variations.find((variation) => variation.id === selectedVariationId) ?? null;
 

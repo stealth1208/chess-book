@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useGameStore, useHasHydrated } from "@/shared/store/useGameStore";
+import { useTopicStore } from "@/shared/store/useTopicStore";
 import { Board } from "@/shared/components/Board/Board";
 import { MoveListPanel } from "@/shared/components/MoveListPanel";
 import { NewVariationModal } from "@/shared/components/NewVariationModal";
@@ -18,12 +19,14 @@ export function LibraryScreen() {
     board,
     moves,
     currentIndex,
+  } = useGameStore();
+  const {
     variations,
     selectedFolderId,
     renameVariation,
     deleteVariation,
     moveVariationToFolder,
-  } = useGameStore();
+  } = useTopicStore();
   const hydrated = useHasHydrated();
   const [modalState, setModalState] = useState<ModalState>({ isOpen: false, variationId: null });
 

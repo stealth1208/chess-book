@@ -1,6 +1,6 @@
 'use client';
 
-import { useGameStore } from '@/shared/store/useGameStore';
+import { useTopicStore } from '@/shared/store/useTopicStore';
 
 export function useFolderTreeActions() {
   const {
@@ -20,9 +20,9 @@ export function useFolderTreeActions() {
     expandedFolderIds,
     setExpandedFolderIds,
     expandFolderPath,
-    loadVariationById,
+    selectVariationById,
     moveVariationToFolder,
-  } = useGameStore();
+  } = useTopicStore();
 
   const promptFolderName = (defaultValue = ''): string | null => {
     const input = window.prompt('Ten thu muc', defaultValue);
@@ -65,7 +65,7 @@ export function useFolderTreeActions() {
     expandedFolderIds,
     setExpandedFolderIds,
     expandFolderPath,
-    loadVariationById,
+    selectVariationById,
     moveVariationToFolder,
     promptFolderName,
   };
