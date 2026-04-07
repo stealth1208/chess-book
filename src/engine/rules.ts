@@ -28,7 +28,10 @@ const countPiecesBetween = (board: BoardState, x1: number, y1: number, x2: numbe
 };
 
 export function validateMove(board: BoardState, move: Move): boolean {
-  const { from, to, piece } = move;
+  const { from, to } = move;
+
+  const piece = board[from.y]?.[from.x] ?? null;
+  if (!piece) return false;
   
   // Boundary check
   if (to.x < 0 || to.x > 8 || to.y < 0 || to.y > 9) return false;

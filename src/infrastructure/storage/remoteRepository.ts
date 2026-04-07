@@ -1,14 +1,16 @@
 import localforage from 'localforage';
-import type { ChessBookSnapshot, Folder, Variation } from '@/shared/chessBook/types/chessBook';
+import type { ChessBookSnapshot, Folder, Topic, Variation } from '@/shared/chessBook/types/chessBook';
 
 export interface RemoteRepository {
+  listTopics(userId: string): Promise<Topic[]>;
   listFolders(userId: string): Promise<Folder[]>;
   listVariations(userId: string): Promise<Variation[]>;
+  upsertTopics(userId: string, topics: Topic[]): Promise<void>;
   upsertFolders(userId: string, folders: Folder[]): Promise<void>;
   upsertVariations(userId: string, variations: Variation[]): Promise<void>;
 }
 
-function keyFor(userId: string, entity: 'folders' | 'variations'): string {
+function keyFor(userId: string, entity: 'topics' | 'folders' | 'variations'): string {
   return `xiangqi.remote.${userId}.${entity}`;
 }
 
@@ -28,12 +30,22 @@ function mergeById<T extends { id: string }>(current: T[], incoming: T[]): T[] {
 }
 
 export const remoteRepository: RemoteRepository = {
+  async listTopics(userId: string): Promise<Topic[]> {
+    return readRemote<Topic>(keyFor(userId, 'topics'));
+  },
+
   async listFolders(userId: string): Promise<Folder[]> {
     return readRemote<Folder>(keyFor(userId, 'folders'));
   },
 
   async listVariations(userId: string): Promise<Variation[]> {
     return readRemote<Variation>(keyFor(userId, 'variations'));
+  },
+
+  async upsertTopics(userId: string, topics: Topic[]): Promise<void> {
+    const key = keyFor(userId, 'topics');
+    const current = await readRemote<Topic>(key);
+    await writeRemote(key, mergeById(current, topics.map((topic) => ({ ...topic, userId }))));
   },
 
   async upsertFolders(userId: string, folders: Folder[]): Promise<void> {
@@ -50,10 +62,11 @@ export const remoteRepository: RemoteRepository = {
 };
 
 export async function loadRemoteSnapshot(userId: string): Promise<ChessBookSnapshot> {
-  const [folders, variations] = await Promise.all([
+  const [topics, folders, variations] = await Promise.all([
+    remoteRepository.listTopics(userId),
     remoteRepository.listFolders(userId),
     remoteRepository.listVariations(userId),
   ]);
 
-  return { folders, variations };
+  return { topics, folders, variations };
 }

@@ -1,5 +1,5 @@
-import type { Folder } from "@/shared/chessBook/types/chessBook";
-import { validateFolder } from "@/shared/chessBook/validation/chessBookValidators";
+import type { Folder, Topic } from "@/shared/chessBook/types/chessBook";
+import { validateFolder, validateTopic } from "@/shared/chessBook/validation/chessBookValidators";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -11,11 +11,35 @@ function newId(): string {
     : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-export function createFolderItem(name: string, parentId: string | null, userId: string | null = null): Folder {
+export function createTopicItem(name: string, userId: string | null = null): Topic {
+  const ts = nowIso();
+  const topic: Topic = {
+    id: newId(),
+    userId,
+    name: name.trim(),
+    createdAt: ts,
+    updatedAt: ts,
+  };
+
+  const result = validateTopic(topic);
+  if (!result.ok) {
+    throw new Error(result.message);
+  }
+
+  return topic;
+}
+
+export function createFolderItem(
+  name: string,
+  topicId: string,
+  parentId: string | null,
+  userId: string | null = null
+): Folder {
   const ts = nowIso();
   const folder: Folder = {
     id: newId(),
     userId,
+    topicId,
     name: name.trim(),
     parentId,
     createdAt: ts,

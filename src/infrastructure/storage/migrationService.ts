@@ -25,12 +25,13 @@ export async function migrateGuestDataOnFirstSignIn(userId: string): Promise<Mig
 
   const snapshot = await localRepository.loadSnapshot();
 
-  if (snapshot.folders.length === 0 && snapshot.variations.length === 0) {
+  if (snapshot.topics.length === 0 && snapshot.folders.length === 0 && snapshot.variations.length === 0) {
     markMigrated(userId);
     return 'success';
   }
 
   try {
+    await remoteRepository.upsertTopics(userId, snapshot.topics);
     await remoteRepository.upsertFolders(userId, snapshot.folders);
     await remoteRepository.upsertVariations(userId, snapshot.variations);
     markMigrated(userId);

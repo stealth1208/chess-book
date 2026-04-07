@@ -1,5 +1,5 @@
-import { Text, Tree, type TreeNodeData } from '@mantine/core';
-import { useMemo, useState } from 'react';
+import { Text, Tree, getTreeExpandedState, type TreeNodeData, useTree } from '@mantine/core';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useGameStore } from '@/shared/store/useGameStore';
 
 interface NewVariationModalProps {
@@ -25,15 +25,44 @@ export function NewVariationModal({
   onSubmit,
   onDelete,
 }: NewVariationModalProps) {
-  const { folders, selectedFolderId, saveCurrentVariation } = useGameStore();
+  const {
+    topics,
+    folders,
+    selectedTopicId,
+    selectedFolderId,
+    expandedFolderIds,
+    setExpandedFolderIds,
+    expandFolderPath,
+    createFolder,
+    renameFolder,
+    saveCurrentVariation,
+  } = useGameStore();
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
   const [folderId, setFolderId] = useState<string | null>(initialFolderId ?? selectedFolderId ?? null);
+  const tree = useTree();
+  const nodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  const currentTopicId = useMemo(() => {
+    if (folderId) {
+      const folder = folders.find((item) => item.id === folderId) ?? null;
+      if (folder) {
+        return folder.topicId;
+      }
+    }
+
+    return selectedTopicId ?? topics[0]?.id ?? null;
+  }, [folderId, folders, selectedTopicId, topics]);
 
   const folderTree = useMemo(() => {
-    const byParent = new Map<string | null, typeof folders>();
+    if (!currentTopicId) {
+      return [];
+    }
 
-    for (const folder of folders) {
+    const inTopic = folders.filter((folder) => folder.topicId === currentTopicId);
+    const byParent = new Map<string | null, typeof inTopic>();
+
+    for (const folder of inTopic) {
       const key = folder.parentId;
       if (!byParent.has(key)) {
         byParent.set(key, []);
@@ -52,9 +81,72 @@ export function NewVariationModal({
     };
 
     return buildTree(null);
-  }, [folders]);
+  }, [currentTopicId, folders]);
+
+  const expandedState = useMemo(() => {
+    const state = getTreeExpandedState(folderTree, '*') as Record<string, boolean>;
+    for (const key of Object.keys(state)) {
+      if (key.startsWith('folder:')) {
+        const id = key.slice('folder:'.length);
+        state[key] = expandedFolderIds.includes(id);
+      }
+    }
+    return state;
+  }, [expandedFolderIds, folderTree]);
+
+  useEffect(() => {
+    if (!initialFolderId) {
+      return;
+    }
+
+    expandFolderPath(initialFolderId);
+  }, [expandFolderPath, initialFolderId]);
+
+  useEffect(() => {
+    tree.setExpandedState(expandedState);
+  }, [expandedState, tree]);
+
+  useEffect(() => {
+    if (!folderId) {
+      return;
+    }
+
+    const node = nodeRefs.current.get(`folder:${folderId}`);
+    if (node) {
+      node.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [folderId, folderTree]);
 
   if (!isOpen) return null;
+
+  const createFolderInModal = () => {
+    if (!currentTopicId) {
+      return;
+    }
+
+    const newFolderId = createFolder('Thu muc moi', folderId, currentTopicId);
+    if (!newFolderId) {
+      return;
+    }
+
+    const nextName = window.prompt('Ten thu muc', 'Thu muc moi');
+    if (nextName && nextName.trim()) {
+      renameFolder(newFolderId, nextName.trim());
+    }
+
+    if (folderId) {
+      setExpandedFolderIds(Array.from(new Set([...expandedFolderIds, folderId])));
+    }
+    setFolderId(newFolderId);
+    expandFolderPath(newFolderId);
+  };
+
+  const syncExpandedIdsFromTree = () => {
+    const next = Object.entries(tree.expandedState)
+      .filter(([value, isExpanded]) => isExpanded && value.startsWith('folder:'))
+      .map(([value]) => value.slice('folder:'.length));
+    setExpandedFolderIds(next);
+  };
 
   const save = () => {
     const finalName = name.trim() || `Bien moi ${new Date().toLocaleTimeString()}`;
@@ -107,16 +199,15 @@ export function NewVariationModal({
           <div className="space-y-3">
             <div className="flex justify-between items-center px-1">
               <label className="text-sm font-bold text-on-surface-variant">Thư mục lưu trữ</label>
+              <button
+                type="button"
+                className="rounded-lg bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/20"
+                onClick={createFolderInModal}
+              >
+                + Thu muc
+              </button>
             </div>
             <div className="rounded-xl border border-outline-variant/20 bg-surface-container-low p-2">
-              <button
-                className={`mb-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${folderId === null ? 'bg-white font-bold text-primary shadow-sm' : 'hover:bg-white/80'}`}
-                onClick={() => setFolderId(null)}
-                type="button"
-              >
-                <span className="material-symbols-outlined text-base">folder_off</span>
-                Khong thu muc
-              </button>
 
               {folderTree.length === 0 ? (
                 <Text size="sm" c="dimmed" px="sm" py="xs">
@@ -125,6 +216,7 @@ export function NewVariationModal({
               ) : (
                 <Tree
                   data={folderTree}
+                  tree={tree}
                   levelOffset="md"
                   renderNode={({ node, elementProps, hasChildren }) => {
                     const value = String(node.value);
@@ -134,9 +226,17 @@ export function NewVariationModal({
                     return (
                       <div
                         {...elementProps}
+                        ref={(element) => {
+                          if (element) {
+                            nodeRefs.current.set(value, element);
+                          } else {
+                            nodeRefs.current.delete(value);
+                          }
+                        }}
                         onClick={(event) => {
                           elementProps.onClick(event);
                           if (currentFolderId) {
+                            expandFolderPath(currentFolderId);
                             setFolderId(currentFolderId);
                           }
                         }}

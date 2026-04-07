@@ -1,6 +1,15 @@
+export type Topic = {
+  id: string;
+  userId: string | null;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Folder = {
   id: string;
   userId: string | null;
+  topicId: string;
   name: string;
   parentId: string | null;
   createdAt: string;
@@ -10,6 +19,7 @@ export type Folder = {
 export type Variation = {
   id: string;
   userId: string | null;
+  topicId: string;
   folderId: string | null;
   name: string;
   initialFen: string;
@@ -29,6 +39,7 @@ export type MigrationJob = {
 };
 
 export type ChessBookSnapshot = {
+  topics: Topic[];
   folders: Folder[];
   variations: Variation[];
 };

@@ -1,6 +1,6 @@
 import { localRepository } from "@/infrastructure/storage/localRepository";
 import { loadRemoteSnapshot, remoteRepository } from "@/infrastructure/storage/remoteRepository";
-import type { ChessBookSnapshot, ChessBookStorageMode, Folder, Variation } from "@/shared/chessBook/types/chessBook";
+import type { ChessBookSnapshot, ChessBookStorageMode, Folder, Topic, Variation } from "@/shared/chessBook/types/chessBook";
 
 class ChessBookStorageService {
   private mode: ChessBookStorageMode = "guest";
@@ -22,6 +22,15 @@ class ChessBookStorageService {
     }
 
     return loadRemoteSnapshot(this.userId);
+  }
+
+  async saveTopics(topics: Topic[]): Promise<void> {
+    if (this.mode === "guest" || !this.userId) {
+      await localRepository.saveTopics(topics);
+      return;
+    }
+
+    await remoteRepository.upsertTopics(this.userId, topics);
   }
 
   async saveFolders(folders: Folder[]): Promise<void> {

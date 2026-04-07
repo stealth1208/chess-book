@@ -44,7 +44,6 @@ export function Board({ board, onMove, interactive = true }: BoardProps) {
           onMove({
             from: selectedCoord,
             to: { x, y },
-            piece: movingPiece
           });
           setSelectedCoord(null);
         }

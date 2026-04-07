@@ -4,14 +4,22 @@ import { useGameStore } from '@/shared/store/useGameStore';
 
 export function useFolderTreeActions() {
   const {
+    topics,
     folders,
     variations,
+    selectedTopicId,
     selectedFolderId,
     selectedVariationId,
+    createTopic,
     createFolder,
+    renameTopic,
     renameFolder,
     deleteFolder,
+    selectTopic,
     selectFolder,
+    expandedFolderIds,
+    setExpandedFolderIds,
+    expandFolderPath,
     loadVariationById,
     moveVariationToFolder,
   } = useGameStore();
@@ -24,6 +32,11 @@ export function useFolderTreeActions() {
   };
 
   const tryDeleteFolder = (folderId: string): void => {
+    const confirmed = window.confirm('Are you sure you want to delete this folder?');
+    if (!confirmed) {
+      return;
+    }
+
     const hasChildFolder = folders.some((folder) => folder.parentId === folderId);
     const hasVariations = variations.some((variation) => variation.folderId === folderId);
 
@@ -36,14 +49,22 @@ export function useFolderTreeActions() {
   };
 
   return {
+    topics,
     folders,
     variations,
+    selectedTopicId,
     selectedFolderId,
     selectedVariationId,
+    createTopic,
     createFolder,
+    renameTopic,
     renameFolder,
     tryDeleteFolder,
+    selectTopic,
     selectFolder,
+    expandedFolderIds,
+    setExpandedFolderIds,
+    expandFolderPath,
     loadVariationById,
     moveVariationToFolder,
     promptFolderName,

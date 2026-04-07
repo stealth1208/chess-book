@@ -15,6 +15,7 @@ export function createVariationItem(input: {
   name: string;
   initialFen: string;
   moves: string[];
+  topicId: string;
   folderId: string | null;
   userId?: string | null;
 }): Variation {
@@ -22,6 +23,7 @@ export function createVariationItem(input: {
   const variation: Variation = {
     id: newId(),
     userId: input.userId ?? null,
+    topicId: input.topicId,
     folderId: input.folderId,
     name: input.name.trim(),
     initialFen: input.initialFen,
@@ -70,7 +72,8 @@ export function deleteVariationsByFolderIds(variations: Variation[], folderIds: 
 export function moveVariationToFolderItem(
   variations: Variation[],
   variationId: string,
-  folderId: string | null
+  folderId: string | null,
+  topicId?: string
 ): Variation[] {
   return variations.map((variation) => {
     if (variation.id !== variationId) {
@@ -79,6 +82,7 @@ export function moveVariationToFolderItem(
 
     return {
       ...variation,
+      topicId: topicId ?? variation.topicId,
       folderId,
       updatedAt: nowIso(),
     };

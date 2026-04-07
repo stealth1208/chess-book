@@ -14,7 +14,6 @@ export type Coordinate = {
 export type Move = {
   from: Coordinate;
   to: Coordinate;
-  piece: Piece;
 };
 
 // 10 rows (y=0 is bottom, y=9 is top usually, or y=0 is top depending on representation)
