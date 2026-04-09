@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useGameStore, useHasHydrated } from "@/shared/store/useGameStore";
 import { useTopicStore } from "@/shared/store/useTopicStore";
 import { Board } from "@/shared/components/Board/Board";
@@ -17,10 +17,13 @@ type ModalState = {
 export function LibraryScreen() {
   const {
     board,
+    resetGame,
     moves,
     currentIndex,
   } = useGameStore();
   const {
+    selectedVariationId,
+    clearSelectionState,
     variations,
     selectedFolderId,
     renameVariation,
@@ -29,6 +32,17 @@ export function LibraryScreen() {
   } = useTopicStore();
   const hydrated = useHasHydrated();
   const [modalState, setModalState] = useState<ModalState>({ isOpen: false, variationId: null });
+
+  useEffect(() => {
+    clearSelectionState();
+    resetGame();
+  }, [clearSelectionState, resetGame]);
+
+  useEffect(() => {
+    if (!selectedVariationId) {
+      resetGame();
+    }
+  }, [selectedVariationId, resetGame]);
 
   const editingVariation = useMemo(
     () => variations.find((variation) => variation.id === modalState.variationId) ?? null,

@@ -34,6 +34,7 @@ interface TopicStore {
   deleteVariation: (variationId: string) => void;
   moveVariationToFolder: (variationId: string, folderId: string | null) => void;
   selectVariationById: (variationId: string) => void;
+  clearSelectionState: () => void;
   setAuthUser: (userId: string | null) => void;
   syncLibraryFromStorage: () => Promise<void>;
 }
@@ -383,16 +384,22 @@ export const useTopicStore = create<TopicStore>()(
         }
 
         try {
-          const ancestorIds = collectAncestorFolderIds(get().folders, variation.folderId);
           set({
             selectedVariationId: variationId,
-            selectedTopicId: variation.topicId,
-            selectedFolderId: variation.folderId,
-            expandedFolderIds: Array.from(new Set([...get().expandedFolderIds, ...ancestorIds])),
+            selectedTopicId: null,
+            selectedFolderId: null,
           });
         } catch (error) {
           console.warn(handleMalformedReplayFailure(error));
         }
+      },
+
+      clearSelectionState: () => {
+        set({
+          selectedTopicId: null,
+          selectedFolderId: null,
+          selectedVariationId: null,
+        });
       },
 
       setAuthUser: (userId) => {
@@ -426,22 +433,29 @@ export const useTopicStore = create<TopicStore>()(
           return;
         }
 
-        const nextSelectedFolderId = currentState.selectedFolderId ?? normalized.folders[0]?.id ?? null;
-        const nextSelectedVariationId = currentState.selectedVariationId ?? normalized.variations[0]?.id ?? null;
+        const nextSelectedFolderId = normalized.folders.some((folder) => folder.id === currentState.selectedFolderId)
+          ? currentState.selectedFolderId
+          : null;
+        const nextSelectedVariationId = normalized.variations.some((variation) => variation.id === currentState.selectedVariationId)
+          ? currentState.selectedVariationId
+          : null;
+        const selectedVariation = nextSelectedVariationId
+          ? normalized.variations.find((variation) => variation.id === nextSelectedVariationId) ?? null
+          : null;
+        const selectedFolder = nextSelectedFolderId
+          ? normalized.folders.find((folder) => folder.id === nextSelectedFolderId) ?? null
+          : null;
+        const hasCurrentSelectedTopic = normalized.topics.some((topic) => topic.id === currentState.selectedTopicId);
+        const nextSelectedTopicId = selectedVariation?.topicId
+          ?? selectedFolder?.topicId
+          ?? (hasCurrentSelectedTopic ? currentState.selectedTopicId : null)
+          ?? null;
 
         set({
           topics: normalized.topics,
           folders: normalized.folders,
           variations: normalized.variations,
-          selectedTopicId: nextSelectedVariationId
-            ? normalized.variations.find((v) => v.id === nextSelectedVariationId)?.topicId ??
-              (nextSelectedFolderId ? normalized.folders.find((f) => f.id === nextSelectedFolderId)?.topicId ?? null : null) ??
-              currentState.selectedTopicId ??
-              normalized.topics[0]?.id ??
-              null
-            : (nextSelectedFolderId
-              ? normalized.folders.find((f) => f.id === nextSelectedFolderId)?.topicId ?? currentState.selectedTopicId ?? normalized.topics[0]?.id ?? null
-              : currentState.selectedTopicId ?? normalized.topics[0]?.id ?? null),
+          selectedTopicId: nextSelectedTopicId,
           selectedFolderId: nextSelectedFolderId,
           selectedVariationId: nextSelectedVariationId,
         });
@@ -457,10 +471,6 @@ export const useTopicStore = create<TopicStore>()(
         topics: state.topics,
         folders: state.folders,
         variations: state.variations,
-        selectedTopicId: state.selectedTopicId,
-        selectedFolderId: state.selectedFolderId,
-        selectedVariationId: state.selectedVariationId,
-        expandedFolderIds: state.expandedFolderIds,
         authUserId: state.authUserId,
       }),
     }

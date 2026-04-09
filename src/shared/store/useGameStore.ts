@@ -16,6 +16,7 @@ interface GameStore {
   currentIndex: number;
 
   // Actions
+  resetGame: () => void;
   loadVariation: (initialFen: string, moves: string[]) => void;
   applyMove: (moveString: string) => void;
   makeMove: (move: Move) => void;
@@ -38,6 +39,16 @@ export const useGameStore = create<GameStore>()(
       boards: START_BOARDS,
       moves: [],
       currentIndex: -1,
+
+      resetGame: () => {
+        set({
+          initialFen: START_FEN,
+          board: START_BOARDS[0],
+          boards: START_BOARDS,
+          moves: [],
+          currentIndex: -1,
+        });
+      },
 
       loadVariation: (initialFen, moves) => {
         const nextMoves = [...moves];
