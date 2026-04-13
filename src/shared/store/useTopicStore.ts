@@ -22,6 +22,7 @@ interface TopicStore {
   // Actions
   createTopic: (name: string) => string;
   renameTopic: (topicId: string, name: string) => void;
+  deleteTopic: (topicId: string) => void;
   selectTopic: (topicId: string | null) => void;
   createFolder: (name: string, parentId?: string | null, topicId?: string | null) => string | null;
   renameFolder: (folderId: string, name: string) => void;
@@ -224,6 +225,29 @@ export const useTopicStore = create<TopicStore>()(
             };
           }),
         }));
+        chessBookStorageService.saveTopics(get().topics).catch(console.error);
+      },
+
+      deleteTopic: (topicId) => {
+        set((state) => {
+          const hasFolderInTopic = state.folders.some((folder) => folder.topicId === topicId);
+          const hasVariationInTopic = state.variations.some((variation) => variation.topicId === topicId);
+
+          if (hasFolderInTopic || hasVariationInTopic) {
+            console.warn('Cannot delete non-empty topic.');
+            return state;
+          }
+
+          const nextTopics = state.topics.filter((topic) => topic.id !== topicId);
+          const nextSelectedTopicId = state.selectedTopicId === topicId
+            ? nextTopics[0]?.id ?? null
+            : state.selectedTopicId;
+
+          return {
+            topics: nextTopics,
+            selectedTopicId: nextSelectedTopicId,
+          };
+        });
         chessBookStorageService.saveTopics(get().topics).catch(console.error);
       },
 

@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { ActionIcon, Badge, Group, Text, Tree, getTreeExpandedState, type TreeNodeData, useTree } from '@mantine/core';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { ActionIcon, Badge, Group, Text, Tree, type TreeNodeData, useTree } from '@mantine/core';
 import { useFolderTreeActions } from '@/features/library/hooks/useFolderTreeActions';
+import { TopicNodeEditModal } from '@/features/TopicView/TopicNodeEditModal';
 import { useGameStore } from '@/shared/store/useGameStore';
 import { useTopicStore } from '@/shared/store/useTopicStore';
 
@@ -24,6 +25,15 @@ const getExpandedFolderIdsFromState = (state: Record<string, boolean>): string[]
 
 const getNormalizedIdsKey = (ids: string[]): string => JSON.stringify([...ids].sort());
 
+type EditNodeType = 'topic' | 'folder';
+
+type EditNodeState = {
+  isOpen: boolean;
+  nodeType: EditNodeType | null;
+  nodeId: string | null;
+  nodeName: string;
+};
+
 export const TopicView = ({ onEditVariation }: TopicViewProps) => {
   const {
     topics,
@@ -35,8 +45,9 @@ export const TopicView = ({ onEditVariation }: TopicViewProps) => {
     createTopic,
     createFolder,
     renameTopic,
+    deleteTopic,
     renameFolder,
-    tryDeleteFolder,
+    deleteFolder,
     selectTopic,
     selectFolder,
     expandedFolderIds,
@@ -51,8 +62,31 @@ export const TopicView = ({ onEditVariation }: TopicViewProps) => {
 
   const tree = useTree();
   const nodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const appliedExpandedKeyRef = useRef<string>('');
   const syncedExpandedKeyRef = useRef<string>('');
+  const [editNodeState, setEditNodeState] = useState<EditNodeState>({
+    isOpen: false,
+    nodeType: null,
+    nodeId: null,
+    nodeName: '',
+  });
+
+  const openEditModal = useCallback((nodeType: EditNodeType, nodeId: string, nodeName: string) => {
+    setEditNodeState({
+      isOpen: true,
+      nodeType,
+      nodeId,
+      nodeName,
+    });
+  }, []);
+
+  const closeEditModal = useCallback(() => {
+    setEditNodeState({
+      isOpen: false,
+      nodeType: null,
+      nodeId: null,
+      nodeName: '',
+    });
+  }, []);
 
   const foldersByParent = useMemo(() => {
     const map = new Map<string, typeof folders>();
@@ -186,6 +220,52 @@ export const TopicView = ({ onEditVariation }: TopicViewProps) => {
     }
   };
 
+  const editTopic = editNodeState.nodeType === 'topic' && editNodeState.nodeId
+    ? topics.find((topic) => topic.id === editNodeState.nodeId) ?? null
+    : null;
+  const editFolder = editNodeState.nodeType === 'folder' && editNodeState.nodeId
+    ? folders.find((folder) => folder.id === editNodeState.nodeId) ?? null
+    : null;
+
+  const topicHasChildren = editTopic
+    ? folders.some((folder) => folder.topicId === editTopic.id) || variations.some((variation) => variation.topicId === editTopic.id)
+    : false;
+  const folderHasChildren = editFolder
+    ? folders.some((folder) => folder.parentId === editFolder.id) || variations.some((variation) => variation.folderId === editFolder.id)
+    : false;
+
+  const deleteDisabled = editNodeState.nodeType === 'topic' ? topicHasChildren : folderHasChildren;
+  const deleteDisabledReason = editNodeState.nodeType === 'topic'
+    ? 'Cannot delete topic because it is not empty.'
+    : 'Cannot delete folder because it is not empty.';
+
+  const handleSaveNodeName = (name: string): void => {
+    const nextName = name.trim();
+    if (!nextName || !editNodeState.nodeId || !editNodeState.nodeType) {
+      return;
+    }
+
+    if (editNodeState.nodeType === 'topic') {
+      renameTopic(editNodeState.nodeId, nextName);
+      return;
+    }
+
+    renameFolder(editNodeState.nodeId, nextName);
+  };
+
+  const handleDeleteNode = (): void => {
+    if (!editNodeState.nodeId || !editNodeState.nodeType || deleteDisabled) {
+      return;
+    }
+
+    if (editNodeState.nodeType === 'topic') {
+      deleteTopic(editNodeState.nodeId);
+      return;
+    }
+
+    deleteFolder(editNodeState.nodeId);
+  };
+
   // useEffect(() => {
   //   const state = getTreeExpandedState(treeData, '*') as Record<string, boolean>;
 
@@ -271,20 +351,19 @@ export const TopicView = ({ onEditVariation }: TopicViewProps) => {
                     queueMicrotask(syncExpandedIdsFromTree);
                   }}
                   onContextMenu={(event) => {
-                    if (!isFolder || !folderId) {
+                    if ((!isTopic || !topicId) && (!isFolder || !folderId)) {
                       return;
                     }
 
                     event.preventDefault();
-                    const command = window.prompt('1: Doi ten folder\n2: Xoa folder\nNhap lua chon:');
-                    if (command === '1') {
-                      const nextName = promptFolderName(String(node.label));
-                      if (nextName) {
-                        renameFolder(folderId, nextName);
-                      }
+
+                    if (isTopic && topicId) {
+                      openEditModal('topic', topicId, String(node.label));
+                      return;
                     }
-                    if (command === '2') {
-                      tryDeleteFolder(folderId);
+
+                    if (isFolder && folderId) {
+                      openEditModal('folder', folderId, String(node.label));
                     }
                   }}
                   className={`flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors ${
@@ -328,10 +407,7 @@ export const TopicView = ({ onEditVariation }: TopicViewProps) => {
                         variant="subtle"
                         size="sm"
                         onClick={() => {
-                          const nextName = promptFolderName(String(node.label));
-                          if (nextName) {
-                            renameTopic(topicId, nextName);
-                          }
+                          openEditModal('topic', topicId, String(node.label));
                         }}
                         title="Doi ten topic"
                       >
@@ -358,10 +434,7 @@ export const TopicView = ({ onEditVariation }: TopicViewProps) => {
                         variant="subtle"
                         size="sm"
                         onClick={() => {
-                          const nextName = promptFolderName(String(node.label));
-                          if (nextName && folderId) {
-                            renameFolder(folderId, nextName);
-                          }
+                          openEditModal('folder', folderId, String(node.label));
                         }}
                         title="Doi ten folder"
                       >
@@ -393,6 +466,18 @@ export const TopicView = ({ onEditVariation }: TopicViewProps) => {
           />
         )}
       </nav>
+
+      <TopicNodeEditModal
+        key={`${editNodeState.nodeType ?? 'none'}:${editNodeState.nodeId ?? 'none'}:${editNodeState.isOpen ? 'open' : 'closed'}`}
+        isOpen={editNodeState.isOpen}
+        mode={editNodeState.nodeType === 'topic' ? 'topic' : 'folder'}
+        initialName={editNodeState.nodeName}
+        onClose={closeEditModal}
+        onSave={handleSaveNodeName}
+        onDelete={handleDeleteNode}
+        deleteDisabled={deleteDisabled}
+        deleteDisabledReason={deleteDisabledReason}
+      />
     </section>
   );
 };

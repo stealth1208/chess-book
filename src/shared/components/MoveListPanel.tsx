@@ -22,12 +22,13 @@ export function MoveListPanel({ variant = 'analysis', onSaveVariation }: MoveLis
   const activeVariation = variations.find((variation) => variation.id === selectedVariationId) ?? null;
 
   const analysisRows = useMemo(() => {
-    const rows: Array<{ idx: number; red?: string; black?: string }> = [];
-    for (let i = 0; i < moves.length; i += 2) {
+    const rows: Array<{ moveNumber: number; move: string; isRed: boolean }> = [];
+    for (let i = 0; i < moves.length; i++) {
+      const isRed = i % 2 === 0;
       rows.push({
-        idx: i / 2,
-        red: moves[i],
-        black: moves[i + 1],
+        moveNumber: isRed ? Math.floor(i / 2) + 1 : Math.floor(i / 2) + 1,
+        move: moves[i],
+        isRed,
       });
     }
     return rows;
@@ -69,19 +70,27 @@ export function MoveListPanel({ variant = 'analysis', onSaveVariation }: MoveLis
           <table className="w-full text-sm border-collapse">
             <thead className={`sticky top-0 z-10 border-b border-outline-variant/20 ${isLibrary ? 'bg-surface-container-low' : 'bg-white dark:bg-slate-900'}`}>
               <tr className={`font-bold text-xs uppercase tracking-wider ${isLibrary ? 'text-on-surface-variant/60 text-[11px]' : 'text-on-surface-variant'}`}>
-                <th className="py-3 px-4 text-left w-12">STT</th>
-                <th className="py-3 px-2 text-center">Đỏ</th>
-                <th className="py-3 px-2 text-center">Đen</th>
+                <th className="py-3 px-4 text-left">Nước đi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/10">
               {analysisRows.map((row) => {
-                const isCurrent = currentIndex >= row.idx * 2 && currentIndex <= row.idx * 2 + 1;
+                const moveIndex = moves.findIndex((m) => m === row.move);
+                const isCurrent = currentIndex === moveIndex;
+                const moveColor = row.isRed ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200';
+                
                 return (
-                  <tr key={row.idx} className={`transition-colors ${isCurrent ? 'bg-primary/10 border-l-4 border-primary' : isLibrary ? '' : 'hover:bg-primary/5 cursor-pointer'}`}>
-                    <td className="py-3 px-4 font-bold text-on-surface-variant/60">{`${row.idx + 1}.`}</td>
-                    <td className="py-3 px-2 text-center font-bold text-on-surface" onClick={isLibrary ? undefined : () => jumpTo(row.idx * 2)}>{row.red ?? '-'}</td>
-                    <td className="py-3 px-2 text-center font-bold text-on-surface" onClick={isLibrary ? undefined : () => jumpTo(row.idx * 2 + 1)}>{row.black ?? '-'}</td>
+                  <tr
+                    key={`${row.moveNumber}-${row.move}`}
+                    className={`transition-colors ${
+                      isCurrent ? 'bg-primary/10 border-l-4 border-primary' : isLibrary ? '' : 'hover:bg-primary/5 cursor-pointer'
+                    }`}
+                    onClick={isLibrary ? undefined : () => jumpTo(moveIndex)}
+                  >
+                    <td className={`px-4 font-bold align-middle ${moveColor}`}>
+                      <span className="inline-block w-8">{row.isRed ? `${row.moveNumber}.` : ''}</span>
+                      <span>{row.move}</span>
+                    </td>
                   </tr>
                 );
               })}

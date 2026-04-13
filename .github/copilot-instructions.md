@@ -33,6 +33,7 @@
 - Ensure basic accessibility (aria labels, semantic HTML where applicable).
 - Trying avoid passing down props as much as possible; use state management for deeply nested data.
 - Components ordered: 1) hooks, 2) state from store, 3) internal state, 4) event handlers, 5) useEffect, 6) render.
+- Priority to use Mantine UI components and utilities when possible (avoid tailwind).
 
 ### Code Quality
 

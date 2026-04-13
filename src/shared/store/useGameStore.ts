@@ -52,7 +52,7 @@ export const useGameStore = create<GameStore>()(
 
       loadVariation: (initialFen, moves) => {
         const nextMoves = [...moves];
-        const nextIndex = nextMoves.length - 1;
+        const nextIndex = -1;
         let nextBoards: BoardState[];
 
         try {
