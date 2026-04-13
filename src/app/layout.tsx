@@ -4,6 +4,7 @@ import { Inter, Manrope } from "next/font/google";
 import { MantineProvider } from "@mantine/core";
 import { TopNav } from "@/shared/components/TopNav";
 import { AuthBootstrap } from "@/features/auth";
+import { mantineTheme } from "@/theme/mantine-theme";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -30,7 +31,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
       </head>
       <body className="h-full flex flex-col bg-surface text-on-surface font-body overflow-hidden">
-        <MantineProvider defaultColorScheme="auto">
+        <MantineProvider theme={mantineTheme} defaultColorScheme="light">
           <AuthBootstrap />
           <TopNav />
           <main className="flex flex-1 h-[calc(100vh-64px)] overflow-hidden">

@@ -1,5 +1,6 @@
 'use client';
 
+import { ActionIcon, Button, Group, Modal, Stack, Text, TextInput } from '@mantine/core';
 import { useMemo, useState } from 'react';
 
 interface TopicNodeEditModalProps {
@@ -35,97 +36,85 @@ export const TopicNodeEditModal = ({
   }
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-on-surface/40 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface-container-lowest shadow-2xl">
-        <div className="flex items-center justify-between border-b border-outline-variant/15 px-5 py-4">
-          <h3 className="text-lg font-semibold text-on-surface">{title}</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="material-symbols-outlined rounded-full p-1 text-on-surface-variant transition-colors hover:bg-surface-container"
-            aria-label="Close edit modal"
+    <Modal
+      opened={isOpen}
+      onClose={onClose}
+      title={title}
+      centered
+      size="md"
+      withCloseButton={false}
+      overlayProps={{ blur: 4 }}
+    >
+      <Stack gap="lg">
+        <Group justify="space-between" align="center">
+          <Text fw={700} size="lg">
+            {title}
+          </Text>
+          <ActionIcon aria-label="Close edit modal" onClick={onClose}>
+            <span className="material-symbols-outlined">close</span>
+          </ActionIcon>
+        </Group>
+
+        <TextInput
+          label={fieldLabel}
+          value={name}
+          onChange={(event) => setName(event.currentTarget.value)}
+          placeholder={fieldLabel}
+        />
+
+        <Stack gap="xs">
+          <Button
+            variant="subtle"
+            color="danger"
+            justify="flex-start"
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={deleteDisabled}
+            leftSection={<span className="material-symbols-outlined text-lg">delete</span>}
           >
-            close
-          </button>
-        </div>
-
-        <div className="space-y-5 px-5 py-4">
-          <div className="space-y-2">
-            <label htmlFor="topic-node-name" className="text-sm font-semibold text-on-surface-variant">
-              {fieldLabel}
-            </label>
-            <input
-              id="topic-node-name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              className="w-full rounded-lg border border-outline-variant/30 bg-surface px-3 py-2 text-sm text-on-surface outline-none transition-colors focus:border-primary"
-              placeholder={fieldLabel}
-            />
-          </div>
-
-          <div className="rounded-xl border border-outline-variant/20 bg-surface-container p-3">
-            <button
-              type="button"
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={deleteDisabled}
-              aria-label={deleteLabel}
-              title={deleteLabel}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-error/25 text-error transition-colors hover:bg-error/10 disabled:cursor-not-allowed disabled:border-outline-variant/30 disabled:text-on-surface-variant"
-            >
-              <span className="material-symbols-outlined text-lg">delete</span>
-            </button>
-            {deleteDisabled && (
-              <p className="mt-2 text-xs text-on-surface-variant">{deleteDisabledReason}</p>
-            )}
-          </div>
-
-          {showDeleteConfirm && !deleteDisabled && (
-            <div className="rounded-xl border border-error/30 bg-error/10 p-3">
-              <p className="text-sm text-on-surface">Please confirm delete. This action cannot be undone.</p>
-              <div className="mt-3 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-on-surface-variant hover:bg-surface-container-high"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onDelete();
-                    setShowDeleteConfirm(false);
-                    onClose();
-                  }}
-                  className="rounded-lg bg-error px-3 py-1.5 text-sm font-semibold text-on-error"
-                >
-                  Confirm delete
-                </button>
-              </div>
-            </div>
+            {deleteLabel}
+          </Button>
+          {deleteDisabled && (
+            <Text size="xs" c="dimmed">
+              {deleteDisabledReason}
+            </Text>
           )}
-        </div>
+        </Stack>
 
-        <div className="flex justify-end gap-2 border-t border-outline-variant/15 px-5 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg px-3 py-1.5 text-sm font-medium text-on-surface-variant hover:bg-surface-container-high"
-          >
+        {showDeleteConfirm && !deleteDisabled && (
+          <Stack gap="sm" className="rounded-xl bg-error/10 p-3">
+            <Text size="sm">Please confirm delete. This action cannot be undone.</Text>
+            <Group justify="flex-end">
+              <Button variant="default" onClick={() => setShowDeleteConfirm(false)}>
+                Cancel
+              </Button>
+              <Button
+                color="danger"
+                onClick={() => {
+                  onDelete();
+                  setShowDeleteConfirm(false);
+                  onClose();
+                }}
+              >
+                Confirm delete
+              </Button>
+            </Group>
+          </Stack>
+        )}
+
+        <Group justify="flex-end">
+          <Button variant="default" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
             onClick={() => {
               onSave(name);
               onClose();
             }}
-            className="rounded-lg bg-primary px-4 py-1.5 text-sm font-semibold text-on-primary"
           >
             Save
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </Group>
+      </Stack>
+    </Modal>
   );
 };

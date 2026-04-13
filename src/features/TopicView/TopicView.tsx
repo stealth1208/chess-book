@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ActionIcon, Badge, Group, Text, Tree, type TreeNodeData, useTree } from '@mantine/core';
+import { ActionIcon, Badge, Button, Group, Text, Tree, type TreeNodeData, useTree } from '@mantine/core';
 import { useFolderTreeActions } from '@/features/library/hooks/useFolderTreeActions';
 import { TopicNodeEditModal } from '@/features/TopicView/TopicNodeEditModal';
 import { useGameStore } from '@/shared/store/useGameStore';
@@ -9,6 +9,11 @@ import { useTopicStore } from '@/shared/store/useTopicStore';
 
 interface TopicViewProps {
   onEditVariation?: (variationId: string) => void;
+  onSelectTopic?: (topicId: string | null) => void;
+  onSelectFolder?: (folderId: string | null) => void;
+  showHeader?: boolean;
+  showNodeActions?: boolean;
+  showVariations?: boolean;
 }
 
 const TOPIC_PREFIX = 'topic:';
@@ -34,7 +39,14 @@ type EditNodeState = {
   nodeName: string;
 };
 
-export const TopicView = ({ onEditVariation }: TopicViewProps) => {
+export const TopicView = ({
+  onEditVariation,
+  onSelectTopic,
+  onSelectFolder,
+  showHeader = true,
+  showNodeActions = true,
+  showVariations = true,
+}: TopicViewProps) => {
   const {
     topics,
     folders,
@@ -103,6 +115,10 @@ export const TopicView = ({ onEditVariation }: TopicViewProps) => {
   }, [folders]);
 
   const variationsByContainer = useMemo(() => {
+    if (!showVariations) {
+      return new Map<string, typeof variations>();
+    }
+
     const map = new Map<string, typeof variations>();
 
     for (const variation of variations) {
@@ -114,7 +130,7 @@ export const TopicView = ({ onEditVariation }: TopicViewProps) => {
     }
 
     return map;
-  }, [variations]);
+  }, [showVariations, variations]);
 
   const buildFolderNodes = useCallback((parentKey: string, depth = 0, visited: Set<string> = new Set()): TreeNodeData[] => {
     const list = foldersByParent.get(parentKey) ?? [];
@@ -191,13 +207,17 @@ export const TopicView = ({ onEditVariation }: TopicViewProps) => {
 
   const handleNodeClick = (value: string): void => {
     if (value.startsWith(TOPIC_PREFIX)) {
-      selectTopic(value.slice(TOPIC_PREFIX.length));
+      const topicId = value.slice(TOPIC_PREFIX.length);
+      selectTopic(topicId);
+      onSelectTopic?.(topicId);
+      onSelectFolder?.(null);
       return;
     }
 
     if (value.startsWith(FOLDER_PREFIX)) {
       const folderId = value.slice(FOLDER_PREFIX.length);
       selectFolder(folderId);
+      onSelectFolder?.(folderId);
       return;
     }
 
@@ -266,43 +286,19 @@ export const TopicView = ({ onEditVariation }: TopicViewProps) => {
     deleteFolder(editNodeState.nodeId);
   };
 
-  // useEffect(() => {
-  //   const state = getTreeExpandedState(treeData, '*') as Record<string, boolean>;
-
-  //   for (const value of Object.keys(state)) {
-  //     if (value.startsWith(TOPIC_PREFIX)) {
-  //       state[value] = true;
-  //     }
-  //     if (value.startsWith(FOLDER_PREFIX)) {
-  //       const folderId = value.slice(FOLDER_PREFIX.length);
-  //       state[value] = expandedFolderIds.includes(folderId);
-  //     }
-  //   }
-
-  //   const desiredExpandedIds = getExpandedFolderIdsFromState(state);
-  //   const desiredExpandedKey = getNormalizedIdsKey(desiredExpandedIds);
-  //   if (appliedExpandedKeyRef.current === desiredExpandedKey) {
-  //     return;
-  //   }
-
-  //   appliedExpandedKeyRef.current = desiredExpandedKey;
-  //   syncedExpandedKeyRef.current = desiredExpandedKey;
-  //   tree.setExpandedState(state);
-  // }, [expandedFolderIds, tree, treeData]);
-
-
-
   return (
     <section className="flex h-full flex-col overflow-hidden bg-surface-container-low">
-      <div className="shrink-0 border-b border-outline-variant/10 p-5">
-        <h2 className="font-headline text-xl font-bold text-on-surface">Lộ trình khai cuộc</h2>
-        <p className="mt-1 text-sm text-on-surface-variant">Thư mục và biến được đồng bộ từ bộ nhớ cục bộ.</p>
-        <div className="mt-3 flex gap-2">
-          <button className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary" onClick={handleCreateTopic}>
-            + Topic
-          </button>
+      {showHeader && (
+        <div className="shrink-0 border-b border-outline-variant/10 p-5">
+          <h2 className="font-headline text-xl font-bold text-on-surface">Lộ trình khai cuộc</h2>
+          <p className="mt-1 text-sm text-on-surface-variant">Thư mục và biến được đồng bộ từ bộ nhớ cục bộ.</p>
+          <div className="mt-3 flex gap-2">
+            <Button size="xs" onClick={handleCreateTopic}>
+              + Topic
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       <nav className="custom-scrollbar flex-1 overflow-y-auto p-4">
         {treeData.length === 0 ? (
@@ -385,13 +381,13 @@ export const TopicView = ({ onEditVariation }: TopicViewProps) => {
                       {node.label}
                     </Text>
                     {variationId && (
-                      <Badge size="xs" variant="light" color="teal">
+                      <Badge size="xs" variant="light" color="jade">
                         Variation
                       </Badge>
                     )}
                   </Group>
 
-                  {isTopic && topicId && (
+                  {showNodeActions && isTopic && topicId && (
                     <Group gap={4} wrap="nowrap" onClick={(event) => event.stopPropagation()}>
                       <ActionIcon
                         variant="subtle"
@@ -416,7 +412,7 @@ export const TopicView = ({ onEditVariation }: TopicViewProps) => {
                     </Group>
                   )}
 
-                  {isFolder && folderId && (
+                  {showNodeActions && isFolder && folderId && (
                     <Group gap={4} wrap="nowrap" onClick={(event) => event.stopPropagation()}>
                       <ActionIcon
                         variant="subtle"
@@ -443,7 +439,7 @@ export const TopicView = ({ onEditVariation }: TopicViewProps) => {
                     </Group>
                   )}
 
-                  {!isFolder && variationId && onEditVariation && (
+                  {showNodeActions && !isFolder && variationId && onEditVariation && (
                     <ActionIcon
                       variant="subtle"
                       size="sm"
