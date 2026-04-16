@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useGameStore, useHasHydrated } from "@/shared/store/useGameStore";
 import { useTopicStore } from "@/shared/store/useTopicStore";
 import { Board } from "@/shared/components/Board/Board";
@@ -8,11 +8,6 @@ import { MoveListPanel } from "@/shared/components/MoveListPanel";
 import { NewVariationModal } from "@/shared/components/NewVariationModal";
 import { ChessBookLoadingBoundary } from "@/shared/components/ChessBookLoadingBoundary";
 import { TopicView } from "@/features/TopicView";
-
-type ModalState = {
-  isOpen: boolean;
-  variationId: string | null;
-};
 
 export function LibraryScreen() {
   const {
@@ -25,13 +20,14 @@ export function LibraryScreen() {
     selectedVariationId,
     clearSelectionState,
     variations,
-    selectedFolderId,
+    editVariationId,
+    setEditVariationId,
     renameVariation,
     deleteVariation,
     moveVariationToFolder,
   } = useTopicStore();
   const hydrated = useHasHydrated();
-  const [modalState, setModalState] = useState<ModalState>({ isOpen: false, variationId: null });
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     clearSelectionState();
@@ -44,17 +40,48 @@ export function LibraryScreen() {
     }
   }, [selectedVariationId, resetGame]);
 
-  const editingVariation = useMemo(
-    () => variations.find((variation) => variation.id === modalState.variationId) ?? null,
-    [modalState.variationId, variations]
-  );
+  const openEditModal = (variationId: string) => {
+    setEditVariationId(variationId);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const saveVariation = ({ name, folderId }: { name: string; description: string; folderId: string | null }) => {
+    if (!editVariationId) {
+      return;
+    }
+
+    const variation = variations.find((v) => v.id === editVariationId);
+    if (!variation) {
+      return;
+    }
+
+    renameVariation(variation.id, name);
+    if (variation.folderId !== folderId) {
+      moveVariationToFolder(variation.id, folderId);
+    }
+  };
+
+  const deleteCurrentVariation = () => {
+    if (!editVariationId) {
+      return;
+    }
+
+    const variation = variations.find((v) => v.id === editVariationId);
+    if (variation) {
+      deleteVariation(variation.id);
+    }
+  };
 
   return (
     <ChessBookLoadingBoundary isReady={hydrated}>
       <div className="app-page-shell flex h-full w-full flex-col overflow-hidden bg-surface text-on-surface xl:flex-row">
         <aside className="order-1 flex w-full shrink-0 flex-col border-t border-outline-variant/20 bg-white xl:order-1 xl:w-[380px] xl:border-r xl:border-t-0 dark:bg-slate-900">
           <div className="min-h-[280px] flex-1 xl:min-h-0 xl:flex-[1.2]">
-            <TopicView onEditVariation={(variationId) => setModalState({ isOpen: true, variationId })} />
+            <TopicView onEditVariation={openEditModal} />
           </div>
           <div className="border-t border-outline-variant/10 p-4 text-sm text-on-surface-variant">
             <div className="rounded-xl border border-outline-variant/20 bg-surface-container-low p-4">
@@ -100,30 +127,11 @@ export function LibraryScreen() {
         </aside>
 
         <NewVariationModal
-          key={`library:${modalState.variationId ?? 'none'}:${modalState.isOpen ? 'open' : 'closed'}`}
-          isOpen={modalState.isOpen}
-          onClose={() => setModalState({ isOpen: false, variationId: null })}
-          mode="edit"
-          initialName={editingVariation?.name ?? ''}
-          initialMoves={editingVariation?.moves ?? []}
-          initialFolderId={editingVariation?.folderId ?? selectedFolderId ?? null}
-          onSubmit={({ name, folderId }) => {
-            if (!editingVariation) {
-              return;
-            }
-            renameVariation(editingVariation.id, name);
-            if (editingVariation.folderId !== folderId) {
-              moveVariationToFolder(editingVariation.id, folderId);
-            }
-            setModalState({ isOpen: false, variationId: null });
-          }}
-          onDelete={() => {
-            if (!editingVariation) {
-              return;
-            }
-            deleteVariation(editingVariation.id);
-            setModalState({ isOpen: false, variationId: null });
-          }}
+          key={`library:${editVariationId ?? 'none'}:${isModalOpen ? 'open' : 'closed'}`}
+          isOpen={isModalOpen}
+          onClose={closeModal}
+          onSubmit={saveVariation}
+          onDelete={deleteCurrentVariation}
         />
       </div>
     </ChessBookLoadingBoundary>

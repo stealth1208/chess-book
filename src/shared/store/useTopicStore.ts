@@ -18,6 +18,7 @@ interface TopicStore {
   selectedVariationId: string | null;
   expandedFolderIds: string[];
   authUserId: string | null;
+  editVariationId: string | null;
 
   // Actions
   createTopic: (name: string) => string;
@@ -28,14 +29,13 @@ interface TopicStore {
   renameFolder: (folderId: string, name: string) => void;
   deleteFolder: (folderId: string) => void;
   selectFolder: (folderId: string | null) => void;
-  setExpandedFolderIds: (folderIds: string[]) => void;
-  expandFolderPath: (folderId: string | null) => void;
   saveVariation: (name: string, initialFen: string, moves: string[], folderId?: string | null) => void;
   renameVariation: (variationId: string, name: string) => void;
   deleteVariation: (variationId: string) => void;
   moveVariationToFolder: (variationId: string, folderId: string | null) => void;
   selectVariationById: (variationId: string) => void;
   clearSelectionState: () => void;
+  setEditVariationId: (id: string | null) => void;
   setAuthUser: (userId: string | null) => void;
   syncLibraryFromStorage: () => Promise<void>;
 }
@@ -199,6 +199,7 @@ export const useTopicStore = create<TopicStore>()(
     (set, get) => ({
       ...createSeedLibrary(),
       authUserId: null,
+      editVariationId: null,
 
       createTopic: (name) => {
         const topic = createTopicItem(name, get().authUserId);
@@ -325,22 +326,7 @@ export const useTopicStore = create<TopicStore>()(
           selectedFolderId: folderId,
           selectedTopicId: folder?.topicId ?? get().selectedTopicId,
         });
-      },
-
-      setExpandedFolderIds: (folderIds) => {
-        set({ expandedFolderIds: Array.from(new Set(folderIds)) });
-      },
-
-      expandFolderPath: (folderId) => {
-        if (!folderId) {
-          return;
-        }
-
-        const ancestorIds = collectAncestorFolderIds(get().folders, folderId);
-        set((state) => ({
-          expandedFolderIds: Array.from(new Set([...state.expandedFolderIds, ...ancestorIds])),
-        }));
-      },
+      },       
 
       saveVariation: (name, initialFen, moves, folderId = null) => {
         set((state) => {
@@ -409,9 +395,7 @@ export const useTopicStore = create<TopicStore>()(
 
         try {
           set({
-            selectedVariationId: variationId,
-            selectedTopicId: null,
-            selectedFolderId: null,
+            selectedVariationId: variationId,          
           });
         } catch (error) {
           console.warn(handleMalformedReplayFailure(error));
@@ -424,6 +408,10 @@ export const useTopicStore = create<TopicStore>()(
           selectedFolderId: null,
           selectedVariationId: null,
         });
+      },
+
+      setEditVariationId: (id) => {
+        set({ editVariationId: id });
       },
 
       setAuthUser: (userId) => {
@@ -501,53 +489,3 @@ export const useTopicStore = create<TopicStore>()(
   )
 );
 
-/**
- * Centralized hydration hook for topic store.
- */
-export const useTopicStoreHydrated = () => {
-  const [hydrated, setHydrated] = useState(() => {
-    const persistApi = (useTopicStore as typeof useTopicStore & {
-      persist?: {
-        hasHydrated?: () => boolean;
-      };
-    }).persist;
-
-    if (!persistApi?.hasHydrated) {
-      return true;
-    }
-
-    return persistApi.hasHydrated();
-  });
-
-  useEffect(() => {
-    if (hydrated) {
-      return;
-    }
-
-    const persistApi = (useTopicStore as typeof useTopicStore & {
-      persist?: {
-        hasHydrated?: () => boolean;
-        onFinishHydration?: (listener: () => void) => () => void;
-      };
-    }).persist;
-
-    if (persistApi?.hasHydrated?.()) {
-      const timer = window.setTimeout(() => setHydrated(true), 0);
-      return () => window.clearTimeout(timer);
-    }
-
-    if (!persistApi?.onFinishHydration) {
-      const timer = window.setTimeout(() => setHydrated(true), 0);
-      return () => window.clearTimeout(timer);
-    }
-
-    const unsub = persistApi.onFinishHydration(() => setHydrated(true));
-    const fallback = window.setTimeout(() => setHydrated(true), 1500);
-    return () => {
-      unsub();
-      window.clearTimeout(fallback);
-    };
-  }, [hydrated]);
-
-  return hydrated;
-};

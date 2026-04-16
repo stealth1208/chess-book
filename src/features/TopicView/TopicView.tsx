@@ -4,6 +4,8 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActionIcon, Badge, Button, Group, Text, Tree, type TreeNodeData, useTree } from '@mantine/core';
 import { useFolderTreeActions } from '@/features/library/hooks/useFolderTreeActions';
 import { TopicNodeEditModal } from '@/features/TopicView/TopicNodeEditModal';
+import type { Variation } from '@/shared/chessBook/types/chessBook';
+import { useTopicTreeData } from '@/shared/hooks/useTopicTreeData';
 import { useGameStore } from '@/shared/store/useGameStore';
 import { useTopicStore } from '@/shared/store/useTopicStore';
 
@@ -19,17 +21,6 @@ interface TopicViewProps {
 const TOPIC_PREFIX = 'topic:';
 const FOLDER_PREFIX = 'folder:';
 const VARIATION_PREFIX = 'variation:';
-
-const getTreeContainerKey = (topicId: string, parentId: string | null): string => parentId ?? `${TOPIC_PREFIX}${topicId}`;
-
-const getExpandedFolderIdsFromState = (state: Record<string, boolean>): string[] => {
-  return Object.entries(state)
-    .filter(([value, expanded]) => expanded && value.startsWith(FOLDER_PREFIX))
-    .map(([value]) => value.slice(FOLDER_PREFIX.length));
-};
-
-const getNormalizedIdsKey = (ids: string[]): string => JSON.stringify([...ids].sort());
-
 type EditNodeType = 'topic' | 'folder';
 
 type EditNodeState = {
@@ -37,6 +28,49 @@ type EditNodeState = {
   nodeType: EditNodeType | null;
   nodeId: string | null;
   nodeName: string;
+};
+
+const createVariationNode = (variationId: string, label: string): TreeNodeData => ({
+  value: `${VARIATION_PREFIX}${variationId}`,
+  label,
+});
+
+const attachVariationNodes = (
+  nodes: TreeNodeData[],
+  variationsByContainer: Map<string, Variation[]>
+): TreeNodeData[] => {
+  return nodes.map((node) => {
+    const value = String(node.value);
+    const nestedChildren = attachVariationNodes(node.children ?? [], variationsByContainer);
+
+    if (value.startsWith(FOLDER_PREFIX)) {
+      const folderId = value.slice(FOLDER_PREFIX.length);
+      const variationChildren = (variationsByContainer.get(folderId) ?? []).map((variation) => {
+        return createVariationNode(variation.id, variation.name);
+      });
+
+      return {
+        ...node,
+        children: [...nestedChildren, ...variationChildren],
+      };
+    }
+
+    if (value.startsWith(TOPIC_PREFIX)) {
+      const variationChildren = (variationsByContainer.get(value) ?? []).map((variation) => {
+        return createVariationNode(variation.id, variation.name);
+      });
+
+      return {
+        ...node,
+        children: [...nestedChildren, ...variationChildren],
+      };
+    }
+
+    return {
+      ...node,
+      children: nestedChildren,
+    };
+  });
 };
 
 export const TopicView = ({
@@ -51,16 +85,12 @@ export const TopicView = ({
     topics,
     folders,
     variations,
-    selectedTopicId,
-    selectedFolderId,
-    selectedVariationId,
     createTopic,
     createFolder,
     renameTopic,
     deleteTopic,
     renameFolder,
     deleteFolder,
-    selectTopic,
     selectFolder,
     expandedFolderIds,
     setExpandedFolderIds,
@@ -69,18 +99,51 @@ export const TopicView = ({
     promptFolderName,
   } = useFolderTreeActions();
 
+
   const { loadVariation } = useGameStore();
   const topicStore = useTopicStore();
+  const baseTreeData = useTopicTreeData({
+    topics,
+    folders,
+  });
+console.log('baseTreeData', { baseTreeData, topics, folders});
 
   const tree = useTree();
   const nodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const syncedExpandedKeyRef = useRef<string>('');
+
   const [editNodeState, setEditNodeState] = useState<EditNodeState>({
     isOpen: false,
     nodeType: null,
     nodeId: null,
     nodeName: '',
   });
+
+  const [currentVariation, setCurrentVariation] = useState<{ 
+    id: string | null; 
+    topicId: string | null; 
+    folderId: string | null 
+  } | null>(null);
+  const [currentTopicId, setCurrentTopicId] = useState<string>('');
+  const [currentFolderId, setCurrentFolderId] = useState<string>('');
+
+  const editTopic = editNodeState.nodeType === 'topic' && editNodeState.nodeId
+    ? topics.find((topic) => topic.id === editNodeState.nodeId) ?? null
+    : null;
+  const editFolder = editNodeState.nodeType === 'folder' && editNodeState.nodeId
+    ? folders.find((folder) => folder.id === editNodeState.nodeId) ?? null
+    : null;
+
+  const topicHasChildren = editTopic
+    ? folders.some((folder) => folder.topicId === editTopic.id) || variations.some((variation) => variation.topicId === editTopic.id)
+    : false;
+  const folderHasChildren = editFolder
+    ? folders.some((folder) => folder.parentId === editFolder.id) || variations.some((variation) => variation.folderId === editFolder.id)
+    : false;
+
+  const deleteDisabled = editNodeState.nodeType === 'topic' ? topicHasChildren : folderHasChildren;
+  const deleteDisabledReason = editNodeState.nodeType === 'topic'
+    ? 'Cannot delete topic because it is not empty.'
+    : 'Cannot delete folder because it is not empty.';
 
   const openEditModal = useCallback((nodeType: EditNodeType, nodeId: string, nodeName: string) => {
     setEditNodeState({
@@ -100,20 +163,6 @@ export const TopicView = ({
     });
   }, []);
 
-  const foldersByParent = useMemo(() => {
-    const map = new Map<string, typeof folders>();
-
-    for (const folder of folders) {
-      const key = getTreeContainerKey(folder.topicId, folder.parentId);
-      if (!map.has(key)) {
-        map.set(key, []);
-      }
-      map.get(key)!.push(folder);
-    }
-
-    return map;
-  }, [folders]);
-
   const variationsByContainer = useMemo(() => {
     if (!showVariations) {
       return new Map<string, typeof variations>();
@@ -132,58 +181,12 @@ export const TopicView = ({
     return map;
   }, [showVariations, variations]);
 
-  const buildFolderNodes = useCallback((parentKey: string, depth = 0, visited: Set<string> = new Set()): TreeNodeData[] => {
-    const list = foldersByParent.get(parentKey) ?? [];
-
-    return list.flatMap((folder) => {
-      if (visited.has(folder.id) || depth > 20) {
-        return [];
-      }
-
-      const folderVariations = variationsByContainer.get(folder.id) ?? [];
-      const nextVisited = new Set(visited);
-      nextVisited.add(folder.id);
-      const nestedFolders = buildFolderNodes(folder.id, depth + 1, nextVisited);
-
-      return [
-        {
-          value: `folder:${folder.id}`,
-          label: folder.name,
-          children: [
-            ...nestedFolders,
-            ...folderVariations.map((variation) => ({
-              value: `variation:${variation.id}`,
-              label: variation.name,
-            })),
-          ],
-        },
-      ];
-    });
-  }, [foldersByParent, variationsByContainer]);
+  
 
   const treeData = useMemo<TreeNodeData[]>(() => {
-    return topics.map((topic) => ({
-      value: `${TOPIC_PREFIX}${topic.id}`,
-      label: topic.name,
-      children: [
-        ...buildFolderNodes(`${TOPIC_PREFIX}${topic.id}`),
-        ...(variationsByContainer.get(`${TOPIC_PREFIX}${topic.id}`) ?? []).map((variation) => ({
-          value: `${VARIATION_PREFIX}${variation.id}`,
-          label: variation.name,
-        })),
-      ],
-    }));
-  }, [buildFolderNodes, topics, variationsByContainer]);
+    return attachVariationNodes(baseTreeData, variationsByContainer);
+  }, [baseTreeData, variationsByContainer]);
 
-  const syncExpandedIdsFromTree = useCallback((): void => {
-    const nextExpandedIds = getExpandedFolderIdsFromState(tree.expandedState as Record<string, boolean>);
-    const nextKey = getNormalizedIdsKey(nextExpandedIds);
-
-    if (syncedExpandedKeyRef.current !== nextKey) {
-      syncedExpandedKeyRef.current = nextKey;
-      setExpandedFolderIds(nextExpandedIds);
-    }
-  }, [setExpandedFolderIds, tree.expandedState]);
 
   const createChildFolder = useCallback((topicId: string, parentFolderId: string | null) => {
     const nextName = promptFolderName('Thu muc moi');
@@ -208,24 +211,22 @@ export const TopicView = ({
   const handleNodeClick = (value: string): void => {
     if (value.startsWith(TOPIC_PREFIX)) {
       const topicId = value.slice(TOPIC_PREFIX.length);
-      selectTopic(topicId);
-      onSelectTopic?.(topicId);
-      onSelectFolder?.(null);
+      setCurrentTopicId(topicId);    
       return;
     }
 
     if (value.startsWith(FOLDER_PREFIX)) {
       const folderId = value.slice(FOLDER_PREFIX.length);
-      selectFolder(folderId);
-      onSelectFolder?.(folderId);
+      setCurrentFolderId(folderId);     
       return;
     }
 
     if (value.startsWith(VARIATION_PREFIX)) {
       const variationId = value.slice(VARIATION_PREFIX.length);
       const variation = topicStore.variations.find((v) => v.id === variationId);
-      
+     
       selectVariationById(variationId);
+      setCurrentVariation(variation || null);
       
       if (variation) {
         loadVariation(variation.initialFen, variation.moves);
@@ -240,24 +241,7 @@ export const TopicView = ({
     }
   };
 
-  const editTopic = editNodeState.nodeType === 'topic' && editNodeState.nodeId
-    ? topics.find((topic) => topic.id === editNodeState.nodeId) ?? null
-    : null;
-  const editFolder = editNodeState.nodeType === 'folder' && editNodeState.nodeId
-    ? folders.find((folder) => folder.id === editNodeState.nodeId) ?? null
-    : null;
-
-  const topicHasChildren = editTopic
-    ? folders.some((folder) => folder.topicId === editTopic.id) || variations.some((variation) => variation.topicId === editTopic.id)
-    : false;
-  const folderHasChildren = editFolder
-    ? folders.some((folder) => folder.parentId === editFolder.id) || variations.some((variation) => variation.folderId === editFolder.id)
-    : false;
-
-  const deleteDisabled = editNodeState.nodeType === 'topic' ? topicHasChildren : folderHasChildren;
-  const deleteDisabledReason = editNodeState.nodeType === 'topic'
-    ? 'Cannot delete topic because it is not empty.'
-    : 'Cannot delete folder because it is not empty.';
+  
 
   const handleSaveNodeName = (name: string): void => {
     const nextName = name.trim();
@@ -312,21 +296,17 @@ export const TopicView = ({
               const value = String(node.value);
               const isTopic = value.startsWith(TOPIC_PREFIX);
               const isFolder = value.startsWith(FOLDER_PREFIX);
+              const isVariation = value.startsWith(VARIATION_PREFIX);
+
               const topicId = isTopic ? value.slice(TOPIC_PREFIX.length) : null;
               const folderId = isFolder ? value.slice(FOLDER_PREFIX.length) : null;
-              const variationId = value.startsWith(VARIATION_PREFIX) ? value.slice(VARIATION_PREFIX.length) : null;
-              const currentFolder = folderId ? folders.find((folder) => folder.id === folderId) ?? null : null;
-              const variation = variationId ? variations.find((item) => item.id === variationId) ?? null : null;
-              const isSelectedTopic = Boolean(topicId) && selectedTopicId === topicId;
-              const isSelectedFolder = isFolder && selectedFolderId === folderId;
-              const isSelectedVariation = Boolean(variationId) && selectedVariationId === variationId;
-              const nodeTopicId =
-                topicId ??
-                currentFolder?.topicId ??
-                variation?.topicId ??
-                selectedTopicId ??
-                topics[0]?.id ??
-                null;
+              const variationId = isVariation ? value.slice(VARIATION_PREFIX.length) : null;
+              
+              const variation = currentVariation;
+              const isSelectedTopic = isTopic && currentTopicId === topicId;
+              const isSelectedFolder = isFolder && currentFolderId === folderId;
+              const isSelectedVariation = isVariation && currentVariation?.id === variationId;
+            
 
               return (
                 <div
@@ -341,10 +321,7 @@ export const TopicView = ({
                   onClick={(event) => {
                     elementProps.onClick(event);
                     handleNodeClick(value);
-
-                    // Mantine updates tree.expandedState in the click handler.
-                    // Queue sync to capture latest expand/collapse state.
-                    queueMicrotask(syncExpandedIdsFromTree);
+               
                   }}
                   onContextMenu={(event) => {
                     if ((!isTopic || !topicId) && (!isFolder || !folderId)) {
@@ -418,8 +395,8 @@ export const TopicView = ({
                         variant="subtle"
                         size="sm"
                         onClick={() => {
-                          if (nodeTopicId) {
-                            createChildFolder(nodeTopicId, folderId);
+                          if (topicId) {
+                            createChildFolder(topicId, folderId);
                           }
                         }}
                         title="Them folder con"
