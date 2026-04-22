@@ -12,8 +12,8 @@ import {
   Textarea
 } from '@mantine/core';
 import { useEffect, useMemo, useState } from 'react';
-import { TopicView } from '@/features/TopicView';
 import { useTopicStore } from '@/shared/store/useTopicStore';
+import { TopicStructure } from './TopicStructure/TopicStructure';
 
 interface NewVariationModalProps {
   isOpen?: boolean;
@@ -27,41 +27,35 @@ interface NewVariationModalProps {
   onDelete?: () => void;
 }
 
-type NewVariationModalContentProps = Omit<NewVariationModalProps, 'isOpen'> & {
-  selectedFolderId: string | null;
-};
+const DEFAULT_VARIATION_NAME_PREFIX = 'Bien moi';
+const DEFAULT_FOLDER_NAME = 'Thu muc moi';
 
-function NewVariationModalContent({
+export const NewVariationModal = ({
+  isOpen = false,
   onClose,
-  mode = 'create',
+  mode,
   initialName = '',
   initialDescription = '',
   initialFolderId,
   initialMoves = [],
   onSubmit,
   onDelete,
-  selectedFolderId,
-}: NewVariationModalContentProps) {
+}: NewVariationModalProps) => {
   const {
     topics,
     folders,
     selectedTopicId,
-    selectFolder,
-    expandFolderPath,
+    selectedFolderId,
     createFolder,
-    renameFolder,
+    selectFolder,
   } = useTopicStore();
 
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
   const [folderId, setFolderId] = useState<string | null>(initialFolderId ?? selectedFolderId ?? null);
 
-  const isEditMode = mode === 'edit';
-
-  const resetFormState = () => {
-    setName('');
-    setDescription('');
-  };
+  const resolvedMode = mode ?? (onDelete ? 'edit' : 'create');
+  const isEditMode = resolvedMode === 'edit';
 
   const currentTopicId = useMemo(() => {
     if (folderId) {
@@ -74,57 +68,62 @@ function NewVariationModalContent({
     return selectedTopicId ?? topics[0]?.id ?? null;
   }, [folderId, folders, selectedTopicId, topics]);
 
-  useEffect(() => {
-    const nextFolderId = initialFolderId ?? selectedFolderId ?? null;
-
-    selectFolder(nextFolderId);
-
-    if (nextFolderId) {
-      expandFolderPath(nextFolderId);
-    }
-  }, [expandFolderPath, initialFolderId, selectFolder, selectedFolderId]);
+  const handleClose = () => {
+    onClose?.();
+  };
 
   const handleCreateFolder = () => {
     if (!currentTopicId) {
       return;
     }
 
-    const newFolderId = createFolder('Thu muc moi', folderId, currentTopicId);
+    const newFolderId = createFolder(DEFAULT_FOLDER_NAME, folderId, currentTopicId);
     if (!newFolderId) {
       return;
     }
 
-    const nextName = window.prompt('Ten thu muc', 'Thu muc moi');
-    if (nextName && nextName.trim()) {
-      renameFolder(newFolderId, nextName.trim());
-    }
-
     setFolderId(newFolderId);
     selectFolder(newFolderId);
-    expandFolderPath(newFolderId);
   };
 
   const handleSave = () => {
-    const finalName = name.trim() || `Bien moi ${new Date().toLocaleTimeString()}`;
+    const trimmedName = name.trim();
+    const finalName = trimmedName.length > 0
+      ? trimmedName
+      : `${DEFAULT_VARIATION_NAME_PREFIX} ${new Date().toLocaleTimeString()}`;
 
-    if (onSubmit) {
-      onSubmit({ name: finalName, description, folderId });
+    onSubmit?.({
+      name: finalName,
+      description: description.trim(),
+      folderId,
+    });
+
+    onClose?.();
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
     }
 
-    resetFormState();
-    onClose?.();
-  };
+    const nextFolderId = initialFolderId ?? selectedFolderId ?? null;
+    selectFolder(nextFolderId);
+  }, [
+    initialFolderId,
+    isOpen,
+    selectFolder,
+    selectedFolderId,
+  ]);
 
-  const handleClose = () => {
-    resetFormState();
-    onClose?.();
-  };
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <Modal
-      opened
+      opened={isOpen}
       onClose={handleClose}
-      title={isEditMode ? 'Cập nhật biến đi' : 'Lưu biến đi mới'}
+      title={isEditMode ? 'Cap nhat bien di' : 'Luu bien di moi'}
       size="lg"
       centered
       withCloseButton={false}
@@ -133,32 +132,32 @@ function NewVariationModalContent({
       <Stack gap="md">
         <Group justify="space-between" align="center">
           <Text fw={700} size="lg">
-            {isEditMode ? 'Cập nhật biến đi' : 'Lưu biến đi mới'}
+            {isEditMode ? 'Cap nhat bien di' : 'Luu bien di moi'}
           </Text>
-          <ActionIcon variant="subtle" aria-label="Đóng" onClick={handleClose}>
+          <ActionIcon variant="subtle" aria-label="Dong modal" onClick={handleClose}>
             <span className="material-symbols-outlined">close</span>
           </ActionIcon>
         </Group>
 
         <TextInput
-          label="Tên biến đi"
+          label="Ten bien di"
           value={name}
           onChange={(event) => setName(event.currentTarget.value)}
-          placeholder="Binh Phong Ma - Bien 4"
+          placeholder="Binh phong ma - Bien 4"
         />
 
         <Textarea
-          label="Mô tả biến đi"
+          label="Mo ta bien di"
           minRows={3}
           value={description}
           onChange={(event) => setDescription(event.currentTarget.value)}
-          placeholder="Thêm ghi chú hoặc mô tả chi tiết cho biến đi này..."
+          placeholder="Them ghi chu cho bien di nay"
         />
 
         {initialMoves.length > 0 && (
           <Stack gap={4}>
             <Text fw={600} size="sm" c="dimmed">
-              Ký pháp hiện tại
+              Ky phap hien tai
             </Text>
             <Paper withBorder p="sm" radius="md">
               <ScrollArea h={80}>
@@ -171,7 +170,7 @@ function NewVariationModalContent({
         <Stack gap={6}>
           <Group justify="space-between" align="center">
             <Text fw={600} size="sm" c="dimmed">
-              Thư mục lưu trữ
+              Thu muc luu tru
             </Text>
             <Button size="xs" variant="light" onClick={handleCreateFolder}>
               + Thu muc
@@ -179,13 +178,7 @@ function NewVariationModalContent({
           </Group>
 
           <Paper withBorder p={0} radius="md" className="h-72 overflow-hidden">
-            <TopicView
-              showHeader={false}
-              showNodeActions={false}
-              showVariations={false}
-              onSelectTopic={() => setFolderId(null)}
-              onSelectFolder={(nextFolderId) => setFolderId(nextFolderId)}
-            />
+            <TopicStructure />
           </Paper>
         </Stack>
 
@@ -193,51 +186,19 @@ function NewVariationModalContent({
           <div>
             {isEditMode && onDelete && (
               <Button variant="subtle" color="danger" onClick={onDelete}>
-                Xóa biến
+                Xoa bien
               </Button>
             )}
           </div>
 
           <Group gap="sm">
             <Button variant="default" onClick={handleClose}>
-              Hủy bỏ
+              Huy bo
             </Button>
-            <Button onClick={handleSave}>{isEditMode ? 'Lưu thay đổi' : 'Lưu biến đi'}</Button>
+            <Button onClick={handleSave}>{isEditMode ? 'Luu thay doi' : 'Luu bien di'}</Button>
           </Group>
         </Group>
       </Stack>
     </Modal>
   );
-}
-
-export function NewVariationModal({
-  isOpen = false,
-  onClose,
-  mode = 'create',
-  initialName = '',
-  initialDescription = '',
-  initialFolderId,
-  initialMoves = [],
-  onSubmit,
-  onDelete,
-}: NewVariationModalProps) {
-  const { selectedFolderId } = useTopicStore();
-
-  if (!isOpen) {
-    return null;
-  }
-
-  return (
-    <NewVariationModalContent
-      onClose={onClose}
-      mode={mode}
-      initialName={initialName}
-      initialDescription={initialDescription}
-      initialFolderId={initialFolderId}
-      initialMoves={initialMoves}
-      onSubmit={onSubmit}
-      onDelete={onDelete}
-      selectedFolderId={selectedFolderId}
-    />
-  );
-}
+};

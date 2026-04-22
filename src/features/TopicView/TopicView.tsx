@@ -1,10 +1,9 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { ActionIcon, Badge, Button, Group, Text, Tree, type TreeNodeData, useTree } from '@mantine/core';
+import { useCallback, useRef, useState } from 'react';
+import { ActionIcon, Badge, Button, Group, Text, Tree, useTree } from '@mantine/core';
 import { useFolderTreeActions } from '@/features/library/hooks/useFolderTreeActions';
 import { TopicNodeEditModal } from '@/features/TopicView/TopicNodeEditModal';
-import type { Variation } from '@/shared/chessBook/types/chessBook';
 import { useTopicTreeData } from '@/shared/hooks/useTopicTreeData';
 import { useGameStore } from '@/shared/store/useGameStore';
 import { useTopicStore } from '@/shared/store/useTopicStore';
@@ -15,7 +14,6 @@ interface TopicViewProps {
   onSelectFolder?: (folderId: string | null) => void;
   showHeader?: boolean;
   showNodeActions?: boolean;
-  showVariations?: boolean;
 }
 
 const TOPIC_PREFIX = 'topic:';
@@ -30,56 +28,12 @@ type EditNodeState = {
   nodeName: string;
 };
 
-const createVariationNode = (variationId: string, label: string): TreeNodeData => ({
-  value: `${VARIATION_PREFIX}${variationId}`,
-  label,
-});
-
-const attachVariationNodes = (
-  nodes: TreeNodeData[],
-  variationsByContainer: Map<string, Variation[]>
-): TreeNodeData[] => {
-  return nodes.map((node) => {
-    const value = String(node.value);
-    const nestedChildren = attachVariationNodes(node.children ?? [], variationsByContainer);
-
-    if (value.startsWith(FOLDER_PREFIX)) {
-      const folderId = value.slice(FOLDER_PREFIX.length);
-      const variationChildren = (variationsByContainer.get(folderId) ?? []).map((variation) => {
-        return createVariationNode(variation.id, variation.name);
-      });
-
-      return {
-        ...node,
-        children: [...nestedChildren, ...variationChildren],
-      };
-    }
-
-    if (value.startsWith(TOPIC_PREFIX)) {
-      const variationChildren = (variationsByContainer.get(value) ?? []).map((variation) => {
-        return createVariationNode(variation.id, variation.name);
-      });
-
-      return {
-        ...node,
-        children: [...nestedChildren, ...variationChildren],
-      };
-    }
-
-    return {
-      ...node,
-      children: nestedChildren,
-    };
-  });
-};
-
 export const TopicView = ({
   onEditVariation,
   onSelectTopic,
   onSelectFolder,
   showHeader = true,
-  showNodeActions = true,
-  showVariations = true,
+  showNodeActions = true,  
 }: TopicViewProps) => {
   const {
     topics,
@@ -102,11 +56,14 @@ export const TopicView = ({
 
   const { loadVariation } = useGameStore();
   const topicStore = useTopicStore();
-  const baseTreeData = useTopicTreeData({
+  const {    
+    treeWithVariations,
+    
+  } = useTopicTreeData({
     topics,
     folders,
+    variations,
   });
-console.log('baseTreeData', { baseTreeData, topics, folders});
 
   const tree = useTree();
   const nodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -163,31 +120,6 @@ console.log('baseTreeData', { baseTreeData, topics, folders});
     });
   }, []);
 
-  const variationsByContainer = useMemo(() => {
-    if (!showVariations) {
-      return new Map<string, typeof variations>();
-    }
-
-    const map = new Map<string, typeof variations>();
-
-    for (const variation of variations) {
-      const key = variation.folderId ?? `${TOPIC_PREFIX}${variation.topicId}`;
-      if (!map.has(key)) {
-        map.set(key, []);
-      }
-      map.get(key)!.push(variation);
-    }
-
-    return map;
-  }, [showVariations, variations]);
-
-  
-
-  const treeData = useMemo<TreeNodeData[]>(() => {
-    return attachVariationNodes(baseTreeData, variationsByContainer);
-  }, [baseTreeData, variationsByContainer]);
-
-
   const createChildFolder = useCallback((topicId: string, parentFolderId: string | null) => {
     const nextName = promptFolderName('Thu muc moi');
     if (!nextName) {
@@ -211,13 +143,17 @@ console.log('baseTreeData', { baseTreeData, topics, folders});
   const handleNodeClick = (value: string): void => {
     if (value.startsWith(TOPIC_PREFIX)) {
       const topicId = value.slice(TOPIC_PREFIX.length);
-      setCurrentTopicId(topicId);    
+      setCurrentTopicId(topicId);
+      onSelectTopic?.(topicId);
+      onSelectFolder?.(null);
       return;
     }
 
     if (value.startsWith(FOLDER_PREFIX)) {
       const folderId = value.slice(FOLDER_PREFIX.length);
-      setCurrentFolderId(folderId);     
+      setCurrentFolderId(folderId);
+      onSelectFolder?.(folderId);
+      onSelectTopic?.(null);
       return;
     }
 
@@ -239,9 +175,7 @@ console.log('baseTreeData', { baseTreeData, topics, folders});
     if (name) {
       createTopic(name);
     }
-  };
-
-  
+  };  
 
   const handleSaveNodeName = (name: string): void => {
     const nextName = name.trim();
@@ -285,11 +219,11 @@ console.log('baseTreeData', { baseTreeData, topics, folders});
       )}
 
       <nav className="custom-scrollbar flex-1 overflow-y-auto p-4">
-        {treeData.length === 0 ? (
+        {treeWithVariations.length === 0 ? (
           <p className="px-2 py-4 text-sm text-on-surface-variant">Chua co thu muc hoac bien nao.</p>
         ) : (
           <Tree
-            data={treeData}
+            data={treeWithVariations}
             tree={tree}
             levelOffset="md"
             renderNode={({ node, elementProps, hasChildren }) => {

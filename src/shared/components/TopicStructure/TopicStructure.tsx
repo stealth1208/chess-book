@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Group, Text, Tree, useTree } from '@mantine/core';
 import { useTopicTreeData } from '@/shared/hooks/useTopicTreeData';
 import { useTopicStore } from '@/shared/store/useTopicStore';
@@ -20,13 +20,17 @@ export const TopicStructure = ({
   const {
     topics,
     folders,
-     
+    variations,
   } = useTopicStore();
 
-  const treeData = useTopicTreeData({
+  const {
+    treeWithoutVariations,
+  } = useTopicTreeData({
     topics,
     folders,
+  
   });
+console.log('treeWithoutVariations', treeWithoutVariations);
 
   const tree = useTree();
   const [currentTopicId, setCurrentTopicId] = useState<string>('');
@@ -35,17 +39,21 @@ export const TopicStructure = ({
   const handleNodeClick = useCallback((value: string): void => {
     if (value.startsWith(TOPIC_PREFIX)) {
       const topicId = value.slice(TOPIC_PREFIX.length);
-      setCurrentTopicId(topicId);     
+      setCurrentTopicId(topicId);
+      onSelectTopic?.(topicId);
+      onSelectFolder?.(null);
       return;
     }
 
     if (value.startsWith(FOLDER_PREFIX)) {
       const folderId = value.slice(FOLDER_PREFIX.length);
-      setCurrentFolderId(folderId);    
+      setCurrentFolderId(folderId);
+      onSelectFolder?.(folderId);
+      onSelectTopic?.(null);
     }
-  }, []);
+  }, [onSelectFolder, onSelectTopic]);
 
-  if (treeData.length === 0) {
+  if (treeWithoutVariations.length === 0) {
     return (
       <p className="px-2 py-4 text-sm text-on-surface-variant">Chua co thu muc nao.</p>
     );
@@ -54,7 +62,7 @@ export const TopicStructure = ({
   return (
     <nav className="custom-scrollbar h-full overflow-y-auto p-4">
       <Tree
-        data={treeData}
+        data={treeWithoutVariations}
         tree={tree}
         levelOffset="md"
         renderNode={({ node, elementProps, hasChildren }) => {
