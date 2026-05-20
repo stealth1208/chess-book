@@ -1,57 +1,40 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { Group, Text, Tree, useTree } from '@mantine/core';
 import { useTopicTreeData } from '@/shared/hooks/useTopicTreeData';
 import { useTopicStore } from '@/shared/store/useTopicStore';
 
-interface TopicStructureProps {
-  onSelectTopic?: (topicId: string | null) => void;
-  onSelectFolder?: (folderId: string | null) => void;
-}
-
 const TOPIC_PREFIX = 'topic:';
 const FOLDER_PREFIX = 'folder:';
 
-export const TopicStructure = ({
-  onSelectTopic,
-  onSelectFolder,
-}: TopicStructureProps) => {
+export const TopicStructure = () => {
   const {
     topics,
     folders,
-    variations,
+    selectedTopicId,
+    selectedFolderId,
+    selectFolder,
+    selectTopic,
   } = useTopicStore();
 
-  const {
-    treeWithoutVariations,
-  } = useTopicTreeData({
-    topics,
-    folders,
-  
-  });
-console.log('treeWithoutVariations', treeWithoutVariations);
+  const { treeWithoutVariations } = useTopicTreeData({ topics, folders });
 
   const tree = useTree();
-  const [currentTopicId, setCurrentTopicId] = useState<string>('');
-  const [currentFolderId, setCurrentFolderId] = useState<string>('');
 
   const handleNodeClick = useCallback((value: string): void => {
     if (value.startsWith(TOPIC_PREFIX)) {
       const topicId = value.slice(TOPIC_PREFIX.length);
-      setCurrentTopicId(topicId);
-      onSelectTopic?.(topicId);
-      onSelectFolder?.(null);
+      selectTopic(topicId);
+      selectFolder(null);
       return;
     }
 
     if (value.startsWith(FOLDER_PREFIX)) {
       const folderId = value.slice(FOLDER_PREFIX.length);
-      setCurrentFolderId(folderId);
-      onSelectFolder?.(folderId);
-      onSelectTopic?.(null);
+      selectFolder(folderId);
     }
-  }, [onSelectFolder, onSelectTopic]);
+  }, [selectFolder, selectTopic]);
 
   if (treeWithoutVariations.length === 0) {
     return (
@@ -72,15 +55,15 @@ console.log('treeWithoutVariations', treeWithoutVariations);
           const topicId = isTopic ? value.slice(TOPIC_PREFIX.length) : null;
           const folderId = isFolder ? value.slice(FOLDER_PREFIX.length) : null;
 
-          const isSelectedTopic = Boolean(topicId) && currentTopicId === topicId;
-          const isSelectedFolder = isFolder && currentFolderId === folderId;
+          const isSelectedTopic = Boolean(topicId) && selectedTopicId === topicId;
+          const isSelectedFolder = isFolder && selectedFolderId === folderId;
 
           return (
             <div
               {...elementProps}
               onClick={(event) => {
                 elementProps.onClick(event);
-                handleNodeClick(value);               
+                handleNodeClick(value);
               }}
               className={`flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors ${
                 isSelectedTopic

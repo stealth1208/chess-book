@@ -11,20 +11,14 @@ import {
   TextInput,
   Textarea
 } from '@mantine/core';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useGameStore } from '@/shared/store/useGameStore';
 import { useTopicStore } from '@/shared/store/useTopicStore';
 import { TopicStructure } from './TopicStructure/TopicStructure';
 
 interface NewVariationModalProps {
   isOpen?: boolean;
   onClose?: () => void;
-  mode?: 'create' | 'edit';
-  initialName?: string;
-  initialDescription?: string;
-  initialFolderId?: string | null;
-  initialMoves?: string[];
-  onSubmit?: (payload: { name: string; description: string; folderId: string | null }) => void;
-  onDelete?: () => void;
 }
 
 const DEFAULT_VARIATION_NAME_PREFIX = 'Bien moi';
@@ -33,40 +27,44 @@ const DEFAULT_FOLDER_NAME = 'Thu muc moi';
 export const NewVariationModal = ({
   isOpen = false,
   onClose,
-  mode,
-  initialName = '',
-  initialDescription = '',
-  initialFolderId,
-  initialMoves = [],
-  onSubmit,
-  onDelete,
 }: NewVariationModalProps) => {
   const {
     topics,
     folders,
+    variations,
     selectedTopicId,
     selectedFolderId,
+    editVariationId,
     createFolder,
     selectFolder,
+    saveVariation: saveTopicVariation,
+    renameVariation,
+    deleteVariation,
+    moveVariationToFolder,
   } = useTopicStore();
 
-  const [name, setName] = useState(initialName);
-  const [description, setDescription] = useState(initialDescription);
-  const [folderId, setFolderId] = useState<string | null>(initialFolderId ?? selectedFolderId ?? null);
+  const { initialFen, moves } = useGameStore();
 
-  const resolvedMode = mode ?? (onDelete ? 'edit' : 'create');
-  const isEditMode = resolvedMode === 'edit';
+  const editVariation = editVariationId
+    ? (variations.find((v) => v.id === editVariationId) ?? null)
+    : null;
+
+  const isEditMode = editVariation !== null;
+
+  const [name, setName] = useState(editVariation?.name ?? '');
+  const [description, setDescription] = useState('');
+
+  const initialFolderIdRef = useRef(editVariation?.folderId ?? selectedFolderId ?? null);
 
   const currentTopicId = useMemo(() => {
-    if (folderId) {
-      const folder = folders.find((item) => item.id === folderId) ?? null;
+    if (selectedFolderId) {
+      const folder = folders.find((item) => item.id === selectedFolderId) ?? null;
       if (folder) {
         return folder.topicId;
       }
     }
-
     return selectedTopicId ?? topics[0]?.id ?? null;
-  }, [folderId, folders, selectedTopicId, topics]);
+  }, [selectedFolderId, folders, selectedTopicId, topics]);
 
   const handleClose = () => {
     onClose?.();
@@ -77,12 +75,11 @@ export const NewVariationModal = ({
       return;
     }
 
-    const newFolderId = createFolder(DEFAULT_FOLDER_NAME, folderId, currentTopicId);
+    const newFolderId = createFolder(DEFAULT_FOLDER_NAME, selectedFolderId, currentTopicId);
     if (!newFolderId) {
       return;
     }
 
-    setFolderId(newFolderId);
     selectFolder(newFolderId);
   };
 
@@ -92,12 +89,23 @@ export const NewVariationModal = ({
       ? trimmedName
       : `${DEFAULT_VARIATION_NAME_PREFIX} ${new Date().toLocaleTimeString()}`;
 
-    onSubmit?.({
-      name: finalName,
-      description: description.trim(),
-      folderId,
-    });
+    if (isEditMode && editVariation) {
+      renameVariation(editVariation.id, finalName);
+      if (editVariation.folderId !== selectedFolderId) {
+        moveVariationToFolder(editVariation.id, selectedFolderId);
+      }
+    } else {
+      saveTopicVariation(finalName, initialFen, moves, selectedFolderId);
+    }
 
+    onClose?.();
+  };
+
+  const handleDelete = () => {
+    if (!editVariation) {
+      return;
+    }
+    deleteVariation(editVariation.id);
     onClose?.();
   };
 
@@ -105,15 +113,8 @@ export const NewVariationModal = ({
     if (!isOpen) {
       return;
     }
-
-    const nextFolderId = initialFolderId ?? selectedFolderId ?? null;
-    selectFolder(nextFolderId);
-  }, [
-    initialFolderId,
-    isOpen,
-    selectFolder,
-    selectedFolderId,
-  ]);
+    selectFolder(initialFolderIdRef.current);
+  }, [isOpen, selectFolder]);
 
   if (!isOpen) {
     return null;
@@ -153,19 +154,17 @@ export const NewVariationModal = ({
           onChange={(event) => setDescription(event.currentTarget.value)}
           placeholder="Them ghi chu cho bien di nay"
         />
-
-        {initialMoves.length > 0 && (
+        
           <Stack gap={4}>
             <Text fw={600} size="sm" c="dimmed">
               Ky phap hien tai
             </Text>
             <Paper withBorder p="sm" radius="md">
               <ScrollArea h={80}>
-                <Code block>{initialMoves.join(' ')}</Code>
+                <Code block>{moves.join(' ')}</Code>
               </ScrollArea>
             </Paper>
           </Stack>
-        )}
 
         <Stack gap={6}>
           <Group justify="space-between" align="center">
@@ -184,8 +183,8 @@ export const NewVariationModal = ({
 
         <Group justify="space-between" mt="sm">
           <div>
-            {isEditMode && onDelete && (
-              <Button variant="subtle" color="danger" onClick={onDelete}>
+            {isEditMode && (
+              <Button variant="subtle" color="danger" onClick={handleDelete}>
                 Xoa bien
               </Button>
             )}

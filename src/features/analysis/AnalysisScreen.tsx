@@ -20,19 +20,12 @@ export function AnalysisScreen() {
     jumpTo,
     moves,
     currentIndex,
-    initialFen,
   } = useGameStore();
   const {
     selectedVariationId,
     clearSelectionState,
-    selectedFolderId,
-    variations,
     editVariationId,
     setEditVariationId,
-    renameVariation,
-    deleteVariation,
-    moveVariationToFolder,
-    saveVariation: saveTopicVariation,
   } = useTopicStore();
   const hydrated = useHasHydrated();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -60,31 +53,6 @@ export function AnalysisScreen() {
 
   const closeModal = () => {
     setIsModalOpen(false);
-  };
-
-  const saveVariation = ({ name, folderId }: { name: string; description: string; folderId: string | null }) => {
-    if (editVariationId) {
-      const variation = variations.find((v) => v.id === editVariationId);
-      if (variation) {
-        renameVariation(variation.id, name);
-        if (variation.folderId !== folderId) {
-          moveVariationToFolder(variation.id, folderId);
-        }
-      }
-    } else {
-      saveTopicVariation(name, initialFen, moves, folderId ?? selectedFolderId ?? null);
-    }
-  };
-
-  const deleteCurrentVariation = () => {
-    if (!editVariationId) {
-      return;
-    }
-
-    const variation = variations.find((v) => v.id === editVariationId);
-    if (variation) {
-      deleteVariation(variation.id);
-    }
   };
 
   return (
@@ -139,8 +107,6 @@ export function AnalysisScreen() {
           key={`${editVariationId ?? 'create'}:${isModalOpen ? 'open' : 'closed'}`}
           isOpen={isModalOpen}
           onClose={closeModal}
-          onSubmit={saveVariation}
-          onDelete={editVariationId ? deleteCurrentVariation : undefined}
         />
       </div>
     </ChessBookLoadingBoundary>
