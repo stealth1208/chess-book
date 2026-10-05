@@ -16,18 +16,20 @@ interface GameStore {
   boards: BoardState[];
   moves: Move[];
   currentIndex: number;
+  lastError: string | null;
 
   // Actions
   resetGame: () => void;
   loadVariation: (initialFen: string, moves: StoredMove[]) => void;
   applyMove: (move: StoredMove) => void;
-  makeMove: (move: EngineMove) => void;
+  makeMove: (move: EngineMove) => boolean;
   undo: () => void;
   redo: () => void;
   jumpTo: (index: number) => void;
+  clearError: () => void;
 }
 
-const START_FEN = 'rnbakabnr/9/1c5c1/...' as const;
+const START_FEN = 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR r' as const;
 const START_BOARDS = buildBoards(START_FEN, []);
 const FILE_BASE_CODE = 97;
 
@@ -65,6 +67,7 @@ export const useGameStore = create<GameStore>()(
       boards: START_BOARDS,
       moves: [],
       currentIndex: -1,
+      lastError: null,
 
       resetGame: () => {
         set({
@@ -73,7 +76,12 @@ export const useGameStore = create<GameStore>()(
           boards: START_BOARDS,
           moves: [],
           currentIndex: -1,
+          lastError: null,
         });
+      },
+
+      clearError: () => {
+        set({ lastError: null });
       },
 
       loadVariation: (initialFen, moves) => {
@@ -156,8 +164,27 @@ export const useGameStore = create<GameStore>()(
       makeMove: (move) => {
         const state = get();
         const movingPiece = state.board[move.from.y]?.[move.from.x] ?? null;
+        
         if (!movingPiece) {
-          return;
+          set({ lastError: 'Khong co quan co tai vi tri nay' });
+          return false;
+        }
+
+        const uci = `${coordinateToSquare(move.from)}${coordinateToSquare(move.to)}`;
+        
+        const { createEngine } = require('@/engine/engine');
+        const testEngine = createEngine();
+        testEngine.load(state.initialFen);
+        
+        for (const prevMove of state.moves.slice(0, state.currentIndex + 1)) {
+          testEngine.applyMoveString(prevMove.uci);
+        }
+        
+        const isValid = testEngine.applyMoveString(uci);
+        
+        if (!isValid) {
+          set({ lastError: 'Nuoc di khong hop le' });
+          return false;
         }
 
         const notation = formatMoveNotation(move, state.board, movingPiece.color);
@@ -168,8 +195,11 @@ export const useGameStore = create<GameStore>()(
           piece: movingPiece.type,
           notation,
           side: movingPiece.color,
-          uci: `${coordinateToSquare(move.from)}${coordinateToSquare(move.to)}`,
+          uci,
         });
+
+        set({ lastError: null });
+        return true;
       },
 
       undo: () => {

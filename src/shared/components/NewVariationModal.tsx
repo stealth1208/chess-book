@@ -9,16 +9,19 @@ import {
   Stack,
   Text,
   TextInput,
-  Textarea
+  Textarea,
+  Alert
 } from '@mantine/core';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useGameStore } from '@/shared/store/useGameStore';
 import { useTopicStore } from '@/shared/store/useTopicStore';
 import { TopicStructure } from './TopicStructure/TopicStructure';
+import { parseVietnameseNotation } from '@/features/engine/notation/parseVietnameseNotation';
 
 interface NewVariationModalProps {
   isOpen?: boolean;
   onClose?: () => void;
+  currentNotation?: string;
 }
 
 const DEFAULT_VARIATION_NAME_PREFIX = 'Bien moi';
@@ -27,6 +30,7 @@ const DEFAULT_FOLDER_NAME = 'Thu muc moi';
 export const NewVariationModal = ({
   isOpen = false,
   onClose,
+  currentNotation = '',
 }: NewVariationModalProps) => {
   const {
     topics,
@@ -53,8 +57,10 @@ export const NewVariationModal = ({
 
   const [name, setName] = useState(editVariation?.name ?? '');
   const [description, setDescription] = useState('');
+  const [parseError, setParseError] = useState<string | null>(null);
 
   const initialFolderIdRef = useRef(editVariation?.folderId ?? selectedFolderId ?? null);
+  const hasLoadedNotationRef = useRef(false);
 
   const currentTopicId = useMemo(() => {
     if (selectedFolderId) {
@@ -111,10 +117,25 @@ export const NewVariationModal = ({
 
   useEffect(() => {
     if (!isOpen) {
+      hasLoadedNotationRef.current = false;
+      setParseError(null);
       return;
     }
     selectFolder(initialFolderIdRef.current);
-  }, [isOpen, selectFolder]);
+
+    if (currentNotation && !hasLoadedNotationRef.current && !isEditMode) {
+      hasLoadedNotationRef.current = true;
+      const result = parseVietnameseNotation(currentNotation, initialFen);
+      
+      if (Array.isArray(result)) {
+        const { loadVariation: loadGameVariation } = useGameStore.getState();
+        loadGameVariation(initialFen, result);
+        setParseError(null);
+      } else {
+        setParseError(result.error);
+      }
+    }
+  }, [isOpen, selectFolder, currentNotation, initialFen, isEditMode]);
 
   if (!isOpen) {
     return null;
@@ -139,6 +160,12 @@ export const NewVariationModal = ({
             <span className="material-symbols-outlined">close</span>
           </ActionIcon>
         </Group>
+
+        {parseError && (
+          <Alert color="red" title="Loi phan tich ky phap">
+            {parseError}
+          </Alert>
+        )}
 
         <TextInput
           label="Ten bien di"

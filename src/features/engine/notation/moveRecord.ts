@@ -64,10 +64,13 @@ export const normalizeMoves = (initialFen: string, moves: StoredMove[]): Move[] 
 
   const normalized: Move[] = [];
 
-  moves.forEach((rawMove) => {
+  for (let i = 0; i < moves.length; i++) {
+    const rawMove = moves[i];
     const engineMove = normalizeToEngineMove(rawMove);
+    
     if (!engineMove) {
-      return;
+      const moveStr = typeof rawMove === 'string' ? rawMove : moveToUci(rawMove);
+      throw new Error(`Failed to parse move #${i + 1}: ${moveStr}`);
     }
 
     const board = engine.getBoard();
@@ -86,11 +89,11 @@ export const normalizeMoves = (initialFen: string, moves: StoredMove[]): Move[] 
 
     const ok = engine.applyMoveString(record.uci);
     if (!ok) {
-      return;
+      throw new Error(`Illegal move #${i + 1}: ${record.notation} (${record.uci})`);
     }
 
     normalized.push(record);
-  });
+  }
 
   return normalized;
 };

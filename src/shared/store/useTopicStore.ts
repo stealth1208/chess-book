@@ -39,6 +39,8 @@ interface TopicStore {
   setEditVariationId: (id: string | null) => void;
   setAuthUser: (userId: string | null) => void;
   syncLibraryFromStorage: () => Promise<void>;
+  setExpandedFolderIds: (folderIds: string[]) => void;
+  expandFolderPath: (folderId: string) => void;
 }
 
 function ensureTopicExists(topics: Topic[]): Topic[] {
@@ -157,10 +159,11 @@ function normalizeSnapshot(snapshot: { topics?: Topic[]; folders: Folder[]; vari
 const createSeedLibrary = (): Pick<TopicStore, 'topics' | 'folders' | 'variations' | 'selectedTopicId' | 'selectedFolderId' | 'selectedVariationId' | 'expandedFolderIds'> => {
   const rootTopic = createTopicItem('Khai cuoc Phao Dau');
   const openingFolder = createFolderItem('Co ban', rootTopic.id, null);
+  const startFen = 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR r';
   const sampleVariation = createVariationItem({
     name: 'Bien co ban',
-    initialFen: 'rnbakabnr/9/1c5c1/...',
-    moves: normalizeMoves('rnbakabnr/9/1c5c1/...', ['b0c2', 'h9g7']),
+    initialFen: startFen,
+    moves: normalizeMoves(startFen, ['b7b4', 'h2h5']),
     topicId: rootTopic.id,
     folderId: openingFolder.id,
   });
@@ -408,6 +411,26 @@ export const useTopicStore = create<TopicStore>()(
         }
 
         set({ authUserId: userId });
+      },
+
+      setExpandedFolderIds: (folderIds) => {
+        set({ expandedFolderIds: folderIds });
+      },
+
+      expandFolderPath: (folderId) => {
+        const state = get();
+        const path: string[] = [];
+        let currentId: string | null = folderId;
+
+        while (currentId) {
+          const folder = state.folders.find((f) => f.id === currentId);
+          if (!folder) break;
+          path.push(currentId);
+          currentId = folder.parentId;
+        }
+
+        const expanded = new Set([...state.expandedFolderIds, ...path]);
+        set({ expandedFolderIds: Array.from(expanded) });
       },
 
       syncLibraryFromStorage: async () => {
