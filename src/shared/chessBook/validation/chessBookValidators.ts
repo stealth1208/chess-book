@@ -1,3 +1,5 @@
+import { moveToUci } from '@/features/engine/notation/moveRecord';
+import type { Move } from '@/features/engine/notation/notation.types';
 import type { Folder, Topic, Variation } from "@/shared/chessBook/types/chessBook";
 
 const MOVE_RE = /^[a-i][0-9][a-i][0-9]$/;
@@ -9,6 +11,14 @@ export type ValidationResult = {
 
 export function isValidMoveString(move: string): boolean {
   return MOVE_RE.test(move);
+}
+
+function isValidMoveRecord(move: Move): boolean {
+  if (!move.from || !move.to || !move.notation || !move.piece || !move.side) {
+    return false;
+  }
+
+  return isValidMoveString(moveToUci(move));
 }
 
 export function validateTopic(topic: Topic): ValidationResult {
@@ -51,9 +61,9 @@ export function validateVariation(variation: Variation): ValidationResult {
     return { ok: false, message: "Initial FEN is required." };
   }
 
-  const badMove = variation.moves.find((move) => !isValidMoveString(move));
+  const badMove = variation.moves.find((move) => !isValidMoveRecord(move));
   if (badMove) {
-    return { ok: false, message: `Invalid move format: ${badMove}` };
+    return { ok: false, message: `Invalid move format: ${moveToUci(badMove)}` };
   }
 
   return { ok: true };

@@ -29,6 +29,29 @@ export function AnalysisScreen() {
   } = useTopicStore();
   const hydrated = useHasHydrated();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [confirmedNotation, setConfirmedNotation] = useState('');
+
+  const openCreateModal = () => {
+    setEditVariationId(null);
+    setConfirmedNotation('');
+    setIsModalOpen(true);
+  };
+
+  const openCreateModalFromNotation = (notation: string) => {
+    setEditVariationId(null);
+    setConfirmedNotation(notation.trim());
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (variationId: string) => {
+    setConfirmedNotation('');
+    setEditVariationId(variationId);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
 
   useEffect(() => {
     clearSelectionState();
@@ -41,20 +64,6 @@ export function AnalysisScreen() {
     }
   }, [selectedVariationId, resetGame]);
 
-  const openCreateModal = () => {
-    setEditVariationId(null);
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (variationId: string) => {
-    setEditVariationId(variationId);
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-  };
-
   return (
     <ChessBookLoadingBoundary isReady={hydrated}>
       <div className="app-page-shell flex h-full w-full flex-col overflow-hidden bg-surface text-on-surface xl:flex-row">
@@ -63,7 +72,7 @@ export function AnalysisScreen() {
             <TopicView onEditVariation={openEditModal} />
           </div>
           <div className="border-t border-outline-variant/10">
-            <InputNotation compact onConfirm={openCreateModal} />
+            <InputNotation compact onConfirm={openCreateModalFromNotation} />
           </div>
         </aside>
 
@@ -106,6 +115,7 @@ export function AnalysisScreen() {
         <NewVariationModal
           key={`${editVariationId ?? 'create'}:${isModalOpen ? 'open' : 'closed'}`}
           isOpen={isModalOpen}
+          currentNotation={confirmedNotation}
           onClose={closeModal}
         />
       </div>

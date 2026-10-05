@@ -1,3 +1,4 @@
+import type { Move } from '@/features/engine/notation/notation.types';
 import type { Variation } from "@/shared/chessBook/types/chessBook";
 import { validateVariation } from "@/shared/chessBook/validation/chessBookValidators";
 
@@ -14,7 +15,7 @@ function newId(): string {
 export function createVariationItem(input: {
   name: string;
   initialFen: string;
-  moves: string[];
+  moves: Move[];
   topicId: string;
   folderId: string | null;
   userId?: string | null;

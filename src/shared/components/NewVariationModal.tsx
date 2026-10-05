@@ -161,7 +161,7 @@ export const NewVariationModal = ({
             </Text>
             <Paper withBorder p="sm" radius="md">
               <ScrollArea h={80}>
-                <Code block>{moves.join(' ')}</Code>
+                <Code block>{moves.map((move) => move.notation).join(' ')}</Code>
               </ScrollArea>
             </Paper>
           </Stack>

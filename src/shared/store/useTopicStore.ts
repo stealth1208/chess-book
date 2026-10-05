@@ -2,12 +2,13 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { normalizeMoves } from '@/features/engine/notation/moveRecord';
+import type { Move, StoredMove } from '@/features/engine/notation/notation.types';
 import { chessBookStorageService } from '@/infrastructure/storage/chessBookStorageService';
 import type { Folder, Topic, Variation } from '@/shared/chessBook/types/chessBook';
 import { handleMalformedReplayFailure } from '@/shared/chessBook/errors/chessBookErrors';
 import { createFolderItem, createTopicItem, deleteFolderItem, renameFolderItem } from '@/shared/store/services/folderService';
 import { createVariationItem, deleteVariationItem, deleteVariationsByFolderIds, moveVariationToFolderItem, renameVariationItem } from '@/shared/store/services/variationService';
-import { useState, useEffect } from 'react';
 
 interface TopicStore {
   topics: Topic[];
@@ -29,7 +30,7 @@ interface TopicStore {
   renameFolder: (folderId: string, name: string) => void;
   deleteFolder: (folderId: string) => void;
   selectFolder: (folderId: string | null) => void;
-  saveVariation: (name: string, initialFen: string, moves: string[], folderId?: string | null) => void;
+  saveVariation: (name: string, initialFen: string, moves: Move[], folderId?: string | null) => void;
   renameVariation: (variationId: string, name: string) => void;
   deleteVariation: (variationId: string) => void;
   moveVariationToFolder: (variationId: string, folderId: string | null) => void;
@@ -46,28 +47,6 @@ function ensureTopicExists(topics: Topic[]): Topic[] {
   }
 
   return [createTopicItem('Topic mac dinh')];
-}
-
-function collectAncestorFolderIds(folders: Folder[], folderId: string | null): string[] {
-  if (!folderId) {
-    return [];
-  }
-
-  const byId = new Map(folders.map((folder) => [folder.id, folder]));
-  const ids: string[] = [];
-  const visited = new Set<string>();
-  let current = byId.get(folderId) ?? null;
-
-  while (current && current.parentId) {
-    if (visited.has(current.id)) {
-      break;
-    }
-    ids.push(current.parentId);
-    visited.add(current.id);
-    current = byId.get(current.parentId) ?? null;
-  }
-
-  return ids;
 }
 
 function normalizeSnapshot(snapshot: { topics?: Topic[]; folders: Folder[]; variations: Variation[] }): {
@@ -160,8 +139,11 @@ function normalizeSnapshot(snapshot: { topics?: Topic[]; folders: Folder[]; vari
       }
     }
 
+    const rawMoves = ((variation as Variation & { moves?: StoredMove[] }).moves ?? []) as StoredMove[];
+
     return {
       ...variation,
+      moves: normalizeMoves(variation.initialFen, rawMoves),
       topicId: resolvedTopicId,
       folderId: nextFolderId,
       createdAt: variation.createdAt ?? now,
@@ -178,7 +160,7 @@ const createSeedLibrary = (): Pick<TopicStore, 'topics' | 'folders' | 'variation
   const sampleVariation = createVariationItem({
     name: 'Bien co ban',
     initialFen: 'rnbakabnr/9/1c5c1/...',
-    moves: ['b0c2', 'h9g7'],
+    moves: normalizeMoves('rnbakabnr/9/1c5c1/...', ['b0c2', 'h9g7']),
     topicId: rootTopic.id,
     folderId: openingFolder.id,
   });

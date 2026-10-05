@@ -1,3 +1,5 @@
+import type { Move } from '@/features/engine/notation/notation.types';
+
 export type Topic = {
   id: string;
   userId: string | null;
@@ -23,7 +25,7 @@ export type Variation = {
   folderId: string | null;
   name: string;
   initialFen: string;
-  moves: string[];
+  moves: Move[];
   createdAt: string;
   updatedAt: string;
 };

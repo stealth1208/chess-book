@@ -22,13 +22,14 @@ export function MoveListPanel({ variant = 'analysis', onSaveVariation }: MoveLis
   const activeVariation = variations.find((variation) => variation.id === selectedVariationId) ?? null;
 
   const analysisRows = useMemo(() => {
-    const rows: Array<{ moveNumber: number; move: string; isRed: boolean }> = [];
+    const rows: Array<{ moveNumber: number; moveNotation: string; isRed: boolean; index: number }> = [];
     for (let i = 0; i < moves.length; i++) {
       const isRed = i % 2 === 0;
       rows.push({
-        moveNumber: isRed ? Math.floor(i / 2) + 1 : Math.floor(i / 2) + 1,
-        move: moves[i],
+        moveNumber: Math.floor(i / 2) + 1,
+        moveNotation: moves[i].notation,
         isRed,
+        index: i,
       });
     }
     return rows;
@@ -75,21 +76,31 @@ export function MoveListPanel({ variant = 'analysis', onSaveVariation }: MoveLis
             </thead>
             <tbody className="divide-y divide-outline-variant/10">
               {analysisRows.map((row) => {
-                const moveIndex = moves.findIndex((m) => m === row.move);
+                const moveIndex = row.index;
                 const isCurrent = currentIndex === moveIndex;
                 const moveColor = row.isRed ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200';
-                
+
                 return (
                   <tr
-                    key={`${row.moveNumber}-${row.move}`}
+                    key={`${row.moveNumber}-${moveIndex}`}
                     className={`transition-colors ${
-                      isCurrent ? 'bg-primary/10 border-l-4 border-primary' : isLibrary ? '' : 'hover:bg-primary/5 cursor-pointer'
+                      isCurrent ? 'bg-primary/5' : isLibrary ? '' : 'hover:bg-primary/5 cursor-pointer'
                     }`}
                     onClick={isLibrary ? undefined : () => jumpTo(moveIndex)}
                   >
-                    <td className={`px-4 font-bold align-middle ${moveColor}`}>
-                      <span className="inline-block w-8">{row.isRed ? `${row.moveNumber}.` : ''}</span>
-                      <span>{row.move}</span>
+                    <td className="px-4 py-2 align-middle">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-block w-8 font-bold">{row.isRed ? `${row.moveNumber}.` : ''}</span>
+                        <span
+                          className={`inline-flex min-w-20 items-center justify-center rounded-full border px-3 py-1 text-sm font-bold ${moveColor} ${
+                            isCurrent
+                              ? 'border-primary bg-primary/15 shadow-sm'
+                              : 'border-outline-variant/40 bg-surface-container-low'
+                          }`}
+                        >
+                          {row.moveNotation}
+                        </span>
+                      </div>
                     </td>
                   </tr>
                 );

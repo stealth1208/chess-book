@@ -2,8 +2,10 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { BoardState, Move } from '@/engine/types';
-import { formatMove } from '@/engine/game';
+import { BoardState, Coordinate, Move as EngineMove } from '@/engine/types';
+import { formatMoveNotation } from '@/features/engine/notation/formatMoveNotation';
+import { moveToUci, normalizeMoves, parseUciMove } from '@/features/engine/notation/moveRecord';
+import { Move, StoredMove } from '@/features/engine/notation/notation.types';
 import { handleMalformedReplayFailure } from '@/shared/chessBook/errors/chessBookErrors';
 import { buildBoards } from '@/shared/store/services/boardBuilder';
 import { useState, useEffect } from 'react';
@@ -12,14 +14,14 @@ interface GameStore {
   initialFen: string;
   board: BoardState;
   boards: BoardState[];
-  moves: string[];
+  moves: Move[];
   currentIndex: number;
 
   // Actions
   resetGame: () => void;
-  loadVariation: (initialFen: string, moves: string[]) => void;
-  applyMove: (moveString: string) => void;
-  makeMove: (move: Move) => void;
+  loadVariation: (initialFen: string, moves: StoredMove[]) => void;
+  applyMove: (move: StoredMove) => void;
+  makeMove: (move: EngineMove) => void;
   undo: () => void;
   redo: () => void;
   jumpTo: (index: number) => void;
@@ -27,9 +29,33 @@ interface GameStore {
 
 const START_FEN = 'rnbakabnr/9/1c5c1/...' as const;
 const START_BOARDS = buildBoards(START_FEN, []);
+const FILE_BASE_CODE = 97;
+
+const coordinateToSquare = (coordinate: Coordinate): string => {
+  const file = String.fromCharCode(FILE_BASE_CODE + coordinate.x);
+  return `${file}${coordinate.y}`;
+};
 
 const getBoardForIndex = (boards: BoardState[], index: number): BoardState =>
   boards[index + 1] ?? boards[0];
+
+const normalizeStoreState = (initialFen: string, moves: StoredMove[], currentIndex: number): {
+  moves: Move[];
+  boards: BoardState[];
+  board: BoardState;
+  currentIndex: number;
+} => {
+  const normalizedMoves = normalizeMoves(initialFen, moves);
+  const nextBoards = buildBoards(initialFen, normalizedMoves.map((item) => moveToUci(item)));
+  const boundedIndex = Math.min(currentIndex, normalizedMoves.length - 1);
+
+  return {
+    moves: normalizedMoves,
+    boards: nextBoards,
+    board: getBoardForIndex(nextBoards, boundedIndex),
+    currentIndex: boundedIndex,
+  };
+};
 
 export const useGameStore = create<GameStore>()(
   persist(
@@ -51,38 +77,71 @@ export const useGameStore = create<GameStore>()(
       },
 
       loadVariation: (initialFen, moves) => {
-        const nextMoves = [...moves];
         const nextIndex = -1;
-        let nextBoards: BoardState[];
 
         try {
-          nextBoards = buildBoards(initialFen, nextMoves);
+          const nextState = normalizeStoreState(initialFen, moves, nextIndex);
+          set({
+            initialFen,
+            ...nextState,
+          });
         } catch (error) {
           console.warn(handleMalformedReplayFailure(error));
-          return;
         }
-
-        set({
-          initialFen,
-          moves: nextMoves,
-          currentIndex: nextIndex,
-          boards: nextBoards,
-          board: getBoardForIndex(nextBoards, nextIndex),
-        });
       },
 
-      applyMove: (moveString) => {
+      applyMove: (rawMove) => {
         set((state) => {
-          const nextMoves = state.moves.slice(0, state.currentIndex + 1);
-          nextMoves.push(moveString);
+          const history = state.moves.slice(0, state.currentIndex + 1);
+          let moveRecord: Move | null = null;
+
+          if (typeof rawMove === 'string') {
+            const parsed = parseUciMove(rawMove);
+            if (!parsed) {
+              return state;
+            }
+
+            const movingPiece = state.board[parsed.from.y]?.[parsed.from.x] ?? null;
+            if (!movingPiece) {
+              return state;
+            }
+
+            moveRecord = {
+              from: rawMove.slice(0, 2),
+              to: rawMove.slice(2, 4),
+              piece: movingPiece.type,
+              notation: formatMoveNotation(parsed, state.board, movingPiece.color),
+              side: movingPiece.color,
+              uci: rawMove,
+            };
+          } else {
+            const parsed = parseUciMove(moveToUci(rawMove));
+            if (!parsed) {
+              return state;
+            }
+
+            const movingPiece = state.board[parsed.from.y]?.[parsed.from.x] ?? null;
+            const side = movingPiece?.color ?? rawMove.side;
+            moveRecord = {
+              from: rawMove.from,
+              to: rawMove.to,
+              piece: movingPiece?.type ?? rawMove.piece,
+              notation: rawMove.notation || formatMoveNotation(parsed, state.board, side),
+              side,
+              uci: moveToUci(rawMove),
+            };
+          }
+
+          const nextMoves = [...history, moveRecord];
 
           let nextBoards: BoardState[];
           try {
-            nextBoards = buildBoards(state.initialFen, nextMoves);
+            nextBoards = buildBoards(state.initialFen, nextMoves.map((item) => moveToUci(item)));
           } catch (error) {
             console.warn(handleMalformedReplayFailure(error));
             return state;
           }
+
           const nextIndex = nextMoves.length - 1;
 
           return {
@@ -95,7 +154,22 @@ export const useGameStore = create<GameStore>()(
       },
 
       makeMove: (move) => {
-        get().applyMove(formatMove(move));
+        const state = get();
+        const movingPiece = state.board[move.from.y]?.[move.from.x] ?? null;
+        if (!movingPiece) {
+          return;
+        }
+
+        const notation = formatMoveNotation(move, state.board, movingPiece.color);
+
+        state.applyMove({
+          from: coordinateToSquare(move.from),
+          to: coordinateToSquare(move.to),
+          piece: movingPiece.type,
+          notation,
+          side: movingPiece.color,
+          uci: `${coordinateToSquare(move.from)}${coordinateToSquare(move.to)}`,
+        });
       },
 
       undo: () => {
@@ -125,6 +199,25 @@ export const useGameStore = create<GameStore>()(
     }),
     {
       name: 'xiangqi-board-storage',
+      version: 2,
+      migrate: (persistedState) => {
+        const partial = persistedState as {
+          initialFen?: string;
+          moves?: StoredMove[];
+          currentIndex?: number;
+        };
+
+        const initialFen = partial.initialFen ?? START_FEN;
+        const moves = partial.moves ?? [];
+        const currentIndex = partial.currentIndex ?? -1;
+        const normalized = normalizeStoreState(initialFen, moves, currentIndex);
+
+        return {
+          initialFen,
+          moves: normalized.moves,
+          currentIndex: normalized.currentIndex,
+        };
+      },
       partialize: (state) => ({
         initialFen: state.initialFen,
         moves: state.moves,

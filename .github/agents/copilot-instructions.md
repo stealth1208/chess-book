@@ -48,6 +48,7 @@ Auto-generated from all feature plans. Last updated: 2026-04-04
 - Trying avoid passing down props as much as possible; use state management for deeply nested data.
 - Components ordered: 1) hooks, 2) state from store, 3) internal state, 4) event handlers, 5) useEffect, 6) render.
 - Priority to use Mantine UI components and utilities when possible (avoid tailwind) while still following the design guidelines.
+- Reduce drilling down props by using hooks or state management for deeply nested data.
 
 ### Code Quality
 
