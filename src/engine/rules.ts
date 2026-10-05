@@ -27,6 +27,48 @@ const countPiecesBetween = (board: BoardState, x1: number, y1: number, x2: numbe
   return count;
 };
 
+const checkFlyingGeneral = (board: BoardState, move: Move): boolean => {
+  const nextBoard: BoardState = board.map((row) => row.map((piece) => (piece ? { ...piece } : null)));
+  const movingPiece = nextBoard[move.from.y][move.from.x];
+  
+  nextBoard[move.to.y][move.to.x] = movingPiece;
+  nextBoard[move.from.y][move.from.x] = null;
+
+  let redKingPos: { x: number; y: number } | null = null;
+  let blackKingPos: { x: number; y: number } | null = null;
+
+  for (let y = 0; y < 10; y++) {
+    for (let x = 0; x < 9; x++) {
+      const piece = nextBoard[y][x];
+      if (piece && piece.type === 'king') {
+        if (piece.color === 'red') {
+          redKingPos = { x, y };
+        } else {
+          blackKingPos = { x, y };
+        }
+      }
+    }
+  }
+
+  if (!redKingPos || !blackKingPos) {
+    return true;
+  }
+
+  if (redKingPos.x !== blackKingPos.x) {
+    return true;
+  }
+
+  const piecesInBetween = countPiecesBetween(
+    nextBoard,
+    redKingPos.x,
+    redKingPos.y,
+    blackKingPos.x,
+    blackKingPos.y
+  );
+
+  return piecesInBetween > 0;
+};
+
 export function validateMove(board: BoardState, move: Move): boolean {
   const { from, to } = move;
 
@@ -52,7 +94,7 @@ export function validateMove(board: BoardState, move: Move): boolean {
     case 'king': {
       if (absDx + absDy !== 1) return false;
       if (!isInPalace(to.x, to.y, piece.color)) return false;
-      return true; // We'll implement flying general separately or assume user doesn't strictly need it for MVP, but good practice.
+      break;
     }
     case 'advisor': {
       if (absDx !== 1 || absDy !== 1) return false;
@@ -103,4 +145,10 @@ export function validateMove(board: BoardState, move: Move): boolean {
       return false;
     }
   }
+
+  if (!checkFlyingGeneral(board, move)) {
+    return false;
+  }
+
+  return true;
 }

@@ -30,7 +30,7 @@ export const mantineTheme = createTheme({
         radius: 'md',
         autoContrast: true,
       },
-      styles: (_, props) => ({
+      styles: (_: unknown, props: { variant?: string }) => ({
         root: {
           border: 'none',
           fontWeight: 600,

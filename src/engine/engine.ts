@@ -16,13 +16,15 @@ const isValidCoordinate = (value: number, min: number, max: number): boolean =>
   Number.isInteger(value) && value >= min && value <= max;
 
 export const createEngine = (): Engine => {
-  let board = parseFEN('');
-  let turn: PieceColor = 'black';
+  const initial = parseFEN('');
+  let board = cloneBoard(initial.board);
+  let turn: PieceColor = initial.turn;
 
   return {
     load: (fen: string) => {
-      board = cloneBoard(parseFEN(fen));
-      turn = 'black';
+      const parsed = parseFEN(fen);
+      board = cloneBoard(parsed.board);
+      turn = parsed.turn;
     },
 
     getBoard: () => cloneBoard(board),

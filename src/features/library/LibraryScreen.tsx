@@ -19,12 +19,8 @@ export function LibraryScreen() {
   const {
     selectedVariationId,
     clearSelectionState,
-    variations,
     editVariationId,
     setEditVariationId,
-    renameVariation,
-    deleteVariation,
-    moveVariationToFolder,
   } = useTopicStore();
   const hydrated = useHasHydrated();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -47,33 +43,6 @@ export function LibraryScreen() {
 
   const closeModal = () => {
     setIsModalOpen(false);
-  };
-
-  const saveVariation = ({ name, folderId }: { name: string; description: string; folderId: string | null }) => {
-    if (!editVariationId) {
-      return;
-    }
-
-    const variation = variations.find((v) => v.id === editVariationId);
-    if (!variation) {
-      return;
-    }
-
-    renameVariation(variation.id, name);
-    if (variation.folderId !== folderId) {
-      moveVariationToFolder(variation.id, folderId);
-    }
-  };
-
-  const deleteCurrentVariation = () => {
-    if (!editVariationId) {
-      return;
-    }
-
-    const variation = variations.find((v) => v.id === editVariationId);
-    if (variation) {
-      deleteVariation(variation.id);
-    }
   };
 
   return (
@@ -130,8 +99,6 @@ export function LibraryScreen() {
           key={`library:${editVariationId ?? 'none'}:${isModalOpen ? 'open' : 'closed'}`}
           isOpen={isModalOpen}
           onClose={closeModal}
-          onSubmit={saveVariation}
-          onDelete={deleteCurrentVariation}
         />
       </div>
     </ChessBookLoadingBoundary>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { notifications } from '@mantine/notifications';
 import { useGameStore, useHasHydrated } from "@/shared/store/useGameStore";
 import { useTopicStore } from "@/shared/store/useTopicStore";
 import { Board } from "@/shared/components/Board/Board";
@@ -20,7 +21,21 @@ export function AnalysisScreen() {
     jumpTo,
     moves,
     currentIndex,
+    lastError,
+    clearError,
   } = useGameStore();
+
+  const handleMove = (move: Parameters<typeof makeMove>[0]) => {
+    const success = makeMove(move);
+    if (!success && lastError) {
+      notifications.show({
+        title: 'Nuoc di khong hop le',
+        message: lastError,
+        color: 'red',
+      });
+      clearError();
+    }
+  };
   const {
     selectedVariationId,
     clearSelectionState,
@@ -79,7 +94,7 @@ export function AnalysisScreen() {
         <section className="app-main-section flex-1 overflow-y-auto p-6 md:p-8 xl:order-2">
           <div className="mx-auto flex max-w-screen-2xl flex-col items-center gap-6">
             <div className="app-board-container rounded-2xl border border-outline-variant/20 bg-white p-6 shadow-xl dark:bg-slate-900">
-              <Board board={board} onMove={makeMove} interactive />
+              <Board board={board} onMove={handleMove} interactive />
             </div>
 
             <div className="app-control-bar flex w-full max-w-md items-center justify-center gap-4 rounded-2xl border border-outline-variant/20 bg-surface-container-lowest px-5 py-3 shadow-sm">

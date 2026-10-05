@@ -1,7 +1,9 @@
 import "@mantine/core/styles.css";
+import "@mantine/notifications/styles.css";
 import type { Metadata } from "next";
 import { Inter, Manrope } from "next/font/google";
 import { MantineProvider } from "@mantine/core";
+import { Notifications } from "@mantine/notifications";
 import { TopNav } from "@/shared/components/TopNav";
 import { AuthBootstrap } from "@/features/auth";
 import { mantineTheme } from "@/theme/mantine-theme";
@@ -32,6 +34,7 @@ export default function RootLayout({
       </head>
       <body className="h-full flex flex-col bg-surface text-on-surface font-body overflow-hidden">
         <MantineProvider theme={mantineTheme} defaultColorScheme="light">
+          <Notifications position="top-right" />
           <AuthBootstrap />
           <TopNav />
           <main className="flex flex-1 h-[calc(100vh-64px)] overflow-hidden">
