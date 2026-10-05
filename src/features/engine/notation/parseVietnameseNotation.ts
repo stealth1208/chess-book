@@ -128,7 +128,7 @@ export const parseVietnameseNotation = (
   const uciMoves: string[] = [];
 
   for (const line of lines) {
-    const moveMatches = line.matchAll(/([A-Za-z]+\d+[-+.]\d+)/g);
+    const moveMatches = line.matchAll(/((?:Tg|tg|[A-Za-z])\d+[-+.]\d+)/g);
     
     for (const match of moveMatches) {
       const moveStr = match[1];
