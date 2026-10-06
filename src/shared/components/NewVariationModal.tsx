@@ -42,12 +42,13 @@ export const NewVariationModal = ({
     createFolder,
     selectFolder,
     saveVariation: saveTopicVariation,
+    updateVariation,
     renameVariation,
     deleteVariation,
     moveVariationToFolder,
   } = useTopicStore();
 
-  const { initialFen, moves } = useGameStore();
+  const { initialFen, moves, loadVariation } = useGameStore();
 
   const editVariation = editVariationId
     ? (variations.find((v) => v.id === editVariationId) ?? null)
@@ -56,8 +57,9 @@ export const NewVariationModal = ({
   const isEditMode = editVariation !== null;
 
   const [name, setName] = useState(editVariation?.name ?? '');
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState(editVariation?.description ?? '');
   const [parseError, setParseError] = useState<string | null>(null);
+  const [hasUnconfirmedChanges, setHasUnconfirmedChanges] = useState(false);
 
   const initialFolderIdRef = useRef(editVariation?.folderId ?? selectedFolderId ?? null);
   const hasLoadedNotationRef = useRef(false);
@@ -96,12 +98,18 @@ export const NewVariationModal = ({
       : `${DEFAULT_VARIATION_NAME_PREFIX} ${new Date().toLocaleTimeString()}`;
 
     if (isEditMode && editVariation) {
-      renameVariation(editVariation.id, finalName);
+      // In edit mode: update name, description, and folder
+      updateVariation(editVariation.id, {
+        name: finalName,
+        description: description.trim() || undefined,
+      });
+      
       if (editVariation.folderId !== selectedFolderId) {
         moveVariationToFolder(editVariation.id, selectedFolderId);
       }
     } else {
-      saveTopicVariation(finalName, initialFen, moves, selectedFolderId);
+      // Create new variation
+      saveTopicVariation(finalName, initialFen, moves, selectedFolderId, description.trim() || undefined);
     }
 
     onClose?.();
@@ -119,23 +127,55 @@ export const NewVariationModal = ({
     if (!isOpen) {
       hasLoadedNotationRef.current = false;
       setParseError(null);
+      setHasUnconfirmedChanges(false);
       return;
     }
+    
     selectFolder(initialFolderIdRef.current);
+    
+    // In edit mode, load the variation's moves and description
+    if (isEditMode && editVariation) {
+      setName(editVariation.name);
+      setDescription(editVariation.description ?? '');
+      
+      const { loadVariation: loadGameVariation } = useGameStore.getState();
+      loadGameVariation(editVariation.initialFen, editVariation.moves.map(m => m.uci));
+      return;
+    }
 
+    // Handle notation pasting in create mode
     if (currentNotation && !hasLoadedNotationRef.current && !isEditMode) {
       hasLoadedNotationRef.current = true;
       const result = parseVietnameseNotation(currentNotation, initialFen);
       
       if (Array.isArray(result)) {
-        const { loadVariation: loadGameVariation } = useGameStore.getState();
+        const { loadVariation: loadGameVariation, moves: currentMoves, jumpTo } = useGameStore.getState();
+        
+        // If there are existing moves, ask for confirmation
+        if (currentMoves.length > 0) {
+          const confirmed = window.confirm(
+            'Ban dang co bien di hien tai. Thay the chung bang ky phap moi?'
+          );
+          if (!confirmed) {
+            setParseError('Huy thao tac dan');
+            return;
+          }
+        }
+        
         loadGameVariation(initialFen, result);
         setParseError(null);
+        
+        // Move to the last position after loading
+        if (result.length > 0) {
+          setTimeout(() => {
+            jumpTo(result.length - 1);
+          }, 0);
+        }
       } else {
         setParseError(result.error);
       }
     }
-  }, [isOpen, selectFolder, currentNotation, initialFen, isEditMode]);
+  }, [isOpen, selectFolder, currentNotation, initialFen, isEditMode, editVariation]);
 
   if (!isOpen) {
     return null;
@@ -221,7 +261,9 @@ export const NewVariationModal = ({
             <Button variant="default" onClick={handleClose}>
               Huy bo
             </Button>
-            <Button onClick={handleSave}>{isEditMode ? 'Luu thay doi' : 'Luu bien di'}</Button>
+            <Button onClick={handleSave} disabled={parseError !== null}>
+              {isEditMode ? 'Luu thay doi' : 'Luu bien di'}
+            </Button>
           </Group>
         </Group>
       </Stack>
