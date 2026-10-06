@@ -52,5 +52,27 @@ export const formatMoveNotation = (
   const operator = getOperator(move, notationSide);
   const destination = getDestinationPart(movingPiece.type, move, notationSide);
 
-  return `${pieceSymbol}${fromFile}${operator}${destination}`;
+  // Check if there are other pieces of the same type on the same file
+  let disambiguator = '';
+  const sameFilePieces: number[] = [];
+  
+  for (let y = 0; y < 10; y++) {
+    const piece = boardState[y]?.[move.from.x];
+    if (piece && piece.type === movingPiece.type && piece.color === movingPiece.color) {
+      sameFilePieces.push(y);
+    }
+  }
+
+  // If there are multiple pieces of the same type on the same file, add disambiguator
+  if (sameFilePieces.length > 1) {
+    // For red: trước (t) = smaller y (closer to top), sau (s) = larger y (closer to bottom)
+    // For black: trước (t) = larger y (closer to bottom), sau (s) = smaller y (closer to top)
+    const isFront = pieceSide === 'red' 
+      ? move.from.y === Math.min(...sameFilePieces)
+      : move.from.y === Math.max(...sameFilePieces);
+    
+    disambiguator = isFront ? 't' : 's';
+  }
+
+  return `${pieceSymbol}${disambiguator}${fromFile}${operator}${destination}`;
 };

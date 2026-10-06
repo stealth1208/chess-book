@@ -23,7 +23,7 @@ export function InputNotation({ compact = false, onConfirm }: InputNotationProps
           value={notation}
           onChange={(event) => setNotation(event.target.value)}
           className="flex-1 w-full p-4 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-mono focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none text-on-surface" 
-          placeholder="Ví dụ: 1. P2-5 M8.7 2. M2.3 X9-8..."
+          placeholder="Ví dụ: 1. P2-5 m8.7 2. M2.3 x9-8..."
           rows={compact ? 5 : 12}
         />
         <div className="flex flex-col gap-2">
