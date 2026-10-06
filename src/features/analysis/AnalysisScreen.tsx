@@ -123,6 +123,7 @@ export function AnalysisScreen() {
   const hydrated = useHasHydrated();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmedNotation, setConfirmedNotation] = useState('');
+  const [hasMounted, setHasMounted] = useState(false);
 
   const openCreateModal = () => {
     setEditVariationId(null);
@@ -149,13 +150,16 @@ export function AnalysisScreen() {
   useEffect(() => {
     clearSelectionState();
     // Don't reset game on mount - preserve restored analysis state
+    setHasMounted(true);
   }, [clearSelectionState]);
 
   useEffect(() => {
-    if (!selectedVariationId) {
+    // Only reset when user explicitly deselects a variation after mount
+    // Don't reset on initial mount to preserve restored analysis state
+    if (hasMounted && !selectedVariationId) {
       resetGame();
     }
-  }, [selectedVariationId, resetGame]);
+  }, [selectedVariationId, resetGame, hasMounted]);
 
   return (
     <ChessBookLoadingBoundary isReady={hydrated}>
