@@ -14,6 +14,7 @@ function newId(): string {
 
 export function createVariationItem(input: {
   name: string;
+  description?: string;
   initialFen: string;
   moves: Move[];
   topicId: string;
@@ -27,6 +28,7 @@ export function createVariationItem(input: {
     topicId: input.topicId,
     folderId: input.folderId,
     name: input.name.trim(),
+    description: input.description?.trim() || undefined,
     initialFen: input.initialFen,
     moves: [...input.moves],
     createdAt: ts,

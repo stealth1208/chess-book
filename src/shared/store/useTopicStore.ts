@@ -30,7 +30,8 @@ interface TopicStore {
   renameFolder: (folderId: string, name: string) => void;
   deleteFolder: (folderId: string) => void;
   selectFolder: (folderId: string | null) => void;
-  saveVariation: (name: string, initialFen: string, moves: Move[], folderId?: string | null) => void;
+  saveVariation: (name: string, initialFen: string, moves: Move[], folderId?: string | null, description?: string) => void;
+  updateVariation: (variationId: string, updates: { name?: string; description?: string; moves?: Move[]; initialFen?: string }) => void;
   renameVariation: (variationId: string, name: string) => void;
   deleteVariation: (variationId: string) => void;
   moveVariationToFolder: (variationId: string, folderId: string | null) => void;
@@ -313,7 +314,7 @@ export const useTopicStore = create<TopicStore>()(
         });
       },       
 
-      saveVariation: (name, initialFen, moves, folderId = null) => {
+      saveVariation: (name, initialFen, moves, folderId = null, description) => {
         set((state) => {
           const folder = folderId ? state.folders.find((item) => item.id === folderId) ?? null : null;
           const topicId = folder?.topicId ?? state.selectedTopicId ?? state.topics[0]?.id;
@@ -324,6 +325,7 @@ export const useTopicStore = create<TopicStore>()(
 
           const nextVariation = createVariationItem({
             name,
+            description,
             initialFen,
             moves,
             topicId,
@@ -334,6 +336,29 @@ export const useTopicStore = create<TopicStore>()(
             variations: [...state.variations, nextVariation],
             selectedVariationId: nextVariation.id,
             selectedTopicId: topicId,
+          };
+        });
+        chessBookStorageService.saveVariations(get().variations).catch(console.error);
+      },
+
+      updateVariation: (variationId, updates) => {
+        set((state) => {
+          const variation = state.variations.find(v => v.id === variationId);
+          if (!variation) {
+            return state;
+          }
+
+          const updatedVariation: Variation = {
+            ...variation,
+            ...(updates.name !== undefined && { name: updates.name.trim() }),
+            ...(updates.description !== undefined && { description: updates.description?.trim() || undefined }),
+            ...(updates.moves !== undefined && { moves: updates.moves }),
+            ...(updates.initialFen !== undefined && { initialFen: updates.initialFen }),
+            updatedAt: new Date().toISOString(),
+          };
+
+          return {
+            variations: state.variations.map(v => v.id === variationId ? updatedVariation : v),
           };
         });
         chessBookStorageService.saveVariations(get().variations).catch(console.error);

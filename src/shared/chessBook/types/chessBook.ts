@@ -24,6 +24,7 @@ export type Variation = {
   topicId: string;
   folderId: string | null;
   name: string;
+  description?: string;
   initialFen: string;
   moves: Move[];
   createdAt: string;

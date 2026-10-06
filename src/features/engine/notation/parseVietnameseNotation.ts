@@ -183,17 +183,42 @@ export const parseVietnameseNotation = (
   notation: string,
   initialFen: string = ''
 ): string[] | { error: string } => {
+  // Normalize dash variants (en-dash, em-dash) to hyphen-minus
+  const normalizedNotation = notation
+    .replace(/–/g, '-') // en-dash
+    .replace(/—/g, '-'); // em-dash
+  
+  const trimmed = normalizedNotation.trim();
+  
+  // Reject empty input
+  if (trimmed.length === 0) {
+    return { error: 'Notation is empty' };
+  }
+  
   const engine = createEngine();
   engine.load(initialFen);
 
-  const lines = notation.trim().split('\n');
+  const lines = trimmed.split('\n');
   const uciMoves: string[] = [];
+  const unknownTokens: string[] = [];
 
   for (const line of lines) {
+    // Extract all potential move tokens
     const moveMatches = line.matchAll(/((?:Tg|tg|[A-Za-z])[ts]?\d+[-+.]\d+)/g);
+    const matchedTokens = Array.from(moveMatches).map(m => m[1]);
     
-    for (const match of moveMatches) {
-      const moveStr = match[1];
+    // Check for unrecognized tokens by removing matched moves and common delimiters
+    let remainingLine = line;
+    matchedTokens.forEach(token => {
+      remainingLine = remainingLine.replace(token, '');
+    });
+    // Remove common delimiters and whitespace
+    remainingLine = remainingLine.replace(/[\d\s.,;()]+/g, '').trim();
+    if (remainingLine.length > 0) {
+      unknownTokens.push(remainingLine);
+    }
+    
+    for (const moveStr of matchedTokens) {
       const parsed = parseVietnameseMove(moveStr);
       
       if (!parsed) {
@@ -219,6 +244,16 @@ export const parseVietnameseNotation = (
 
       uciMoves.push(uci);
     }
+  }
+
+  // If we found unknown tokens, report them
+  if (unknownTokens.length > 0) {
+    return { error: `Unrecognized tokens: ${unknownTokens.join(', ')}` };
+  }
+
+  // Reject if no moves were parsed from non-empty input
+  if (uciMoves.length === 0) {
+    return { error: 'No valid moves found in notation' };
   }
 
   return uciMoves;
