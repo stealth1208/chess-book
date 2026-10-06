@@ -27,13 +27,16 @@ export function AnalysisScreen() {
 
   const handleMove = (move: Parameters<typeof makeMove>[0]) => {
     const success = makeMove(move);
-    if (!success && lastError) {
-      notifications.show({
-        title: 'Nuoc di khong hop le',
-        message: lastError,
-        color: 'red',
-      });
-      clearError();
+    if (!success) {
+      const currentError = useGameStore.getState().lastError;
+      if (currentError) {
+        notifications.show({
+          title: 'Nuoc di khong hop le',
+          message: currentError,
+          color: 'red',
+        });
+        clearError();
+      }
     }
   };
   const {
