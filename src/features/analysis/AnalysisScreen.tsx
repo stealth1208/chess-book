@@ -123,7 +123,9 @@ export function AnalysisScreen() {
   const hydrated = useHasHydrated();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmedNotation, setConfirmedNotation] = useState('');
-  const [hasMounted, setHasMounted] = useState(false);
+  
+  // Track previous selectedVariationId to detect deselection transitions
+  const prevSelectedVariationIdRef = useRef<string | null>(undefined as any);
 
   const openCreateModal = () => {
     setEditVariationId(null);
@@ -149,17 +151,21 @@ export function AnalysisScreen() {
 
   useEffect(() => {
     clearSelectionState();
-    // Don't reset game on mount - preserve restored analysis state
-    setHasMounted(true);
   }, [clearSelectionState]);
 
   useEffect(() => {
-    // Only reset when user explicitly deselects a variation after mount
-    // Don't reset on initial mount to preserve restored analysis state
-    if (hasMounted && !selectedVariationId) {
+    // Only reset when user explicitly deselects a variation (non-null → null transition)
+    // Don't reset on initial mount (prevRef is undefined) or when rehydration is still loading
+    const prevId = prevSelectedVariationIdRef.current;
+    
+    if (hydrated && prevId !== undefined && prevId !== null && selectedVariationId === null) {
+      // Actual deselection: was selected, now null
       resetGame();
     }
-  }, [selectedVariationId, resetGame, hasMounted]);
+    
+    // Update ref for next render
+    prevSelectedVariationIdRef.current = selectedVariationId;
+  }, [selectedVariationId, resetGame, hydrated]);
 
   return (
     <ChessBookLoadingBoundary isReady={hydrated}>
