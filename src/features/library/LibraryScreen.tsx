@@ -15,6 +15,9 @@ export function LibraryScreen() {
     resetGame,
     moves,
     currentIndex,
+    undo,
+    redo,
+    jumpTo,
   } = useGameStore();
   const {
     selectedVariationId,
@@ -69,20 +72,40 @@ export function LibraryScreen() {
               <Board board={board} interactive={false} />
             </div>
 
-            <div className="app-control-bar flex w-full max-w-md items-center justify-center gap-4 rounded-2xl border border-outline-variant/20 bg-surface-container-lowest px-5 py-3 shadow-sm opacity-60">
-              <button className="flex h-12 w-12 items-center justify-center rounded-full text-on-surface-variant" disabled>
+            <div className="app-control-bar flex w-full max-w-md items-center justify-center gap-4 rounded-2xl border border-outline-variant/20 bg-surface-container-lowest px-5 py-3 shadow-sm">
+              <button 
+                className="flex h-12 w-12 items-center justify-center rounded-full text-on-surface transition-all hover:bg-surface-container-high active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={() => jumpTo(-1)}
+                disabled={currentIndex === -1}
+              >
                 <span className="material-symbols-outlined">first_page</span>
               </button>
-              <button className="flex h-12 w-12 items-center justify-center rounded-full text-on-surface-variant" disabled>
+              <button 
+                className="flex h-12 w-12 items-center justify-center rounded-full text-on-surface transition-all hover:bg-surface-container-high active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={undo}
+                disabled={currentIndex < 0}
+              >
                 <span className="material-symbols-outlined">chevron_left</span>
               </button>
-              <button className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant" disabled>
-                <span className="material-symbols-outlined text-4xl">play_arrow</span>
+              <button 
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-on-primary shadow-xl transition-all hover:bg-primary-container active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={redo}
+                disabled={currentIndex >= moves.length - 1}
+              >
+                <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>play_arrow</span>
               </button>
-              <button className="flex h-12 w-12 items-center justify-center rounded-full text-on-surface-variant" disabled>
+              <button 
+                className="flex h-12 w-12 items-center justify-center rounded-full text-on-surface transition-all hover:bg-surface-container-high active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={redo}
+                disabled={currentIndex >= moves.length - 1}
+              >
                 <span className="material-symbols-outlined">chevron_right</span>
               </button>
-              <button className="flex h-12 w-12 items-center justify-center rounded-full text-on-surface-variant" disabled>
+              <button 
+                className="flex h-12 w-12 items-center justify-center rounded-full text-on-surface transition-all hover:bg-surface-container-high active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={() => jumpTo(moves.length - 1)}
+                disabled={currentIndex >= moves.length - 1}
+              >
                 <span className="material-symbols-outlined">last_page</span>
               </button>
             </div>

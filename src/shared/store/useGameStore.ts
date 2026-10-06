@@ -85,6 +85,7 @@ export const useGameStore = create<GameStore>()(
       },
 
       loadVariation: (initialFen, moves) => {
+        // Start at position -1 (before first move) so user can replay from beginning
         const nextIndex = -1;
 
         try {
@@ -92,6 +93,7 @@ export const useGameStore = create<GameStore>()(
           set({
             initialFen,
             ...nextState,
+            lastError: null,
           });
         } catch (error) {
           console.warn(handleMalformedReplayFailure(error));

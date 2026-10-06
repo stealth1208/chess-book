@@ -83,10 +83,10 @@ export function MoveListPanel({ variant = 'analysis', onSaveVariation }: MoveLis
                 return (
                   <tr
                     key={`${row.moveNumber}-${moveIndex}`}
-                    className={`transition-colors ${
-                      isCurrent ? 'bg-primary/5' : isLibrary ? '' : 'hover:bg-primary/5 cursor-pointer'
+                    className={`transition-colors cursor-pointer ${
+                      isCurrent ? 'bg-primary/5' : 'hover:bg-primary/5'
                     }`}
-                    onClick={isLibrary ? undefined : () => jumpTo(moveIndex)}
+                    onClick={() => jumpTo(moveIndex)}
                   >
                     <td className="px-4 py-2 align-middle">
                       <div className="flex items-center gap-2">
