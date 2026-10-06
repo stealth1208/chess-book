@@ -103,6 +103,18 @@ export const useGameStore = create<GameStore>()(
       applyMove: (rawMove) => {
         set((state) => {
           const history = state.moves.slice(0, state.currentIndex + 1);
+          
+          // Warn if we're truncating existing moves
+          if (state.currentIndex < state.moves.length - 1 && typeof window !== 'undefined') {
+            const discardCount = state.moves.length - state.currentIndex - 1;
+            const confirmed = window.confirm(
+              `Bạn đang ở giữa dòng kỳ. Nước đi mới sẽ xóa ${discardCount} nước tiếp theo. Tiếp tục?`
+            );
+            if (!confirmed) {
+              return state;
+            }
+          }
+          
           let moveRecord: Move | null = null;
 
           if (typeof rawMove === 'string') {
@@ -220,11 +232,15 @@ export const useGameStore = create<GameStore>()(
 
       jumpTo: (index) => {
         set((state) => {
-          if (index < -1 || index >= state.moves.length) return state;
+          // Validate index is an integer
+          if (!Number.isInteger(index) || index < -1 || index >= state.moves.length) {
+            return state;
+          }
 
           return {
             board: getBoardForIndex(state.boards, index),
             currentIndex: index,
+            lastError: null,
           };
         });
       },

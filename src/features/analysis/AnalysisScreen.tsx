@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { notifications } from '@mantine/notifications';
 import { useGameStore, useHasHydrated } from "@/shared/store/useGameStore";
 import { useTopicStore } from "@/shared/store/useTopicStore";
@@ -21,9 +21,11 @@ export function AnalysisScreen() {
     jumpTo,
     moves,
     currentIndex,
-    lastError,
     clearError,
   } = useGameStore();
+  
+  const [isAutoPlaying, setIsAutoPlaying] = useState(false);
+  const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleMove = (move: Parameters<typeof makeMove>[0]) => {
     const success = makeMove(move);
@@ -39,6 +41,79 @@ export function AnalysisScreen() {
       }
     }
   };
+  
+  // Auto-play functionality
+  const stopAutoPlay = useCallback(() => {
+    if (autoPlayTimerRef.current) {
+      clearInterval(autoPlayTimerRef.current);
+      autoPlayTimerRef.current = null;
+    }
+    setIsAutoPlaying(false);
+  }, []);
+  
+  const startAutoPlay = useCallback(() => {
+    if (currentIndex >= moves.length - 1) {
+      return; // Already at the end
+    }
+    
+    setIsAutoPlaying(true);
+    autoPlayTimerRef.current = setInterval(() => {
+      const state = useGameStore.getState();
+      if (state.currentIndex >= state.moves.length - 1) {
+        stopAutoPlay();
+      } else {
+        state.redo();
+      }
+    }, 1000); // 1 second per move
+  }, [currentIndex, moves.length, stopAutoPlay]);
+  
+  const toggleAutoPlay = useCallback(() => {
+    if (isAutoPlaying) {
+      stopAutoPlay();
+    } else {
+      startAutoPlay();
+    }
+  }, [isAutoPlaying, startAutoPlay, stopAutoPlay]);
+  
+  // Cleanup auto-play on unmount
+  useEffect(() => {
+    return () => {
+      if (autoPlayTimerRef.current) {
+        clearInterval(autoPlayTimerRef.current);
+      }
+    };
+  }, []);
+  
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return; // Don't interfere with form inputs
+      }
+      
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          undo();
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          redo();
+          break;
+        case 'Home':
+          e.preventDefault();
+          jumpTo(-1);
+          break;
+        case 'End':
+          e.preventDefault();
+          jumpTo(moves.length - 1);
+          break;
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo, jumpTo, moves.length]);
   const {
     selectedVariationId,
     clearSelectionState,
@@ -101,23 +176,46 @@ export function AnalysisScreen() {
             </div>
 
             <div className="app-control-bar flex w-full max-w-md items-center justify-center gap-4 rounded-2xl border border-outline-variant/20 bg-surface-container-lowest px-5 py-3 shadow-sm">
-              <button className="flex h-12 w-12 items-center justify-center rounded-full text-on-surface transition-all hover:bg-surface-container-high active:scale-90" onClick={() => jumpTo(-1)}>
+              <button 
+                className="flex h-12 w-12 items-center justify-center rounded-full text-on-surface transition-all hover:bg-surface-container-high active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={() => jumpTo(-1)}
+                disabled={currentIndex === -1}
+                aria-label="Về đầu"
+              >
                 <span className="material-symbols-outlined">first_page</span>
               </button>
-              <button className="flex h-12 w-12 items-center justify-center rounded-full text-on-surface transition-all hover:bg-surface-container-high active:scale-90" onClick={undo}>
+              <button 
+                className="flex h-12 w-12 items-center justify-center rounded-full text-on-surface transition-all hover:bg-surface-container-high active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={undo}
+                disabled={currentIndex < 0}
+                aria-label="Lùi lại"
+              >
                 <span className="material-symbols-outlined">chevron_left</span>
               </button>
-              <button className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-on-primary shadow-xl transition-all hover:bg-primary-container active:scale-95" onClick={() => {
-                if (currentIndex < moves.length - 1) {
-                  redo();
-                }
-              }}>
-                <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>play_arrow</span>
+              <button 
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-on-primary shadow-xl transition-all hover:bg-primary-container active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                onClick={toggleAutoPlay}
+                disabled={currentIndex >= moves.length - 1 && !isAutoPlaying}
+                aria-label={isAutoPlaying ? "Tạm dừng" : "Tự động phát"}
+              >
+                <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  {isAutoPlaying ? 'pause' : 'play_arrow'}
+                </span>
               </button>
-              <button className="flex h-12 w-12 items-center justify-center rounded-full text-on-surface transition-all hover:bg-surface-container-high active:scale-90" onClick={redo}>
+              <button 
+                className="flex h-12 w-12 items-center justify-center rounded-full text-on-surface transition-all hover:bg-surface-container-high active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={redo}
+                disabled={currentIndex >= moves.length - 1}
+                aria-label="Tiến lên"
+              >
                 <span className="material-symbols-outlined">chevron_right</span>
               </button>
-              <button className="flex h-12 w-12 items-center justify-center rounded-full text-on-surface transition-all hover:bg-surface-container-high active:scale-90" onClick={() => jumpTo(moves.length - 1)}>
+              <button 
+                className="flex h-12 w-12 items-center justify-center rounded-full text-on-surface transition-all hover:bg-surface-container-high active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={() => jumpTo(moves.length - 1)}
+                disabled={currentIndex >= moves.length - 1}
+                aria-label="Về cuối"
+              >
                 <span className="material-symbols-outlined">last_page</span>
               </button>
             </div>
