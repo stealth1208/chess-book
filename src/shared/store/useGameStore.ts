@@ -268,6 +268,29 @@ export const useGameStore = create<GameStore>()(
           board: normalized.board,
         };
       },
+      merge: (persistedState, currentState) => {
+        // Rebuild boards/board on every rehydrate (not just version changes)
+        const partial = persistedState as {
+          initialFen?: string;
+          moves?: StoredMove[];
+          currentIndex?: number;
+        };
+
+        const initialFen = partial.initialFen ?? currentState.initialFen;
+        const moves = partial.moves ?? currentState.moves;
+        const currentIndex = partial.currentIndex ?? currentState.currentIndex;
+        
+        const normalized = normalizeStoreState(initialFen, moves, currentIndex);
+
+        return {
+          ...currentState,
+          initialFen,
+          moves: normalized.moves,
+          currentIndex: normalized.currentIndex,
+          boards: normalized.boards,
+          board: normalized.board,
+        };
+      },
       partialize: (state) => ({
         initialFen: state.initialFen,
         moves: state.moves,

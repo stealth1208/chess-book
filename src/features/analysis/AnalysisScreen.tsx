@@ -148,8 +148,8 @@ export function AnalysisScreen() {
 
   useEffect(() => {
     clearSelectionState();
-    resetGame();
-  }, [clearSelectionState, resetGame]);
+    // Don't reset game on mount - preserve restored analysis state
+  }, [clearSelectionState]);
 
   useEffect(() => {
     if (!selectedVariationId) {
