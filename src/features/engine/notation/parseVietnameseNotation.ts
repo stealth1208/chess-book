@@ -8,6 +8,7 @@ type ParsedMove = {
   fromFile: number;
   operator: '-' | '.' | '+';
   destination: number;
+  disambiguator?: 't' | 's'; // trước (front) / sau (back)
 };
 
 const reversePieceSymbols: Record<string, { type: PieceType; side: PieceColor }> = {};
@@ -28,6 +29,7 @@ const parseVietnameseMove = (moveStr: string): ParsedMove | null => {
 
   let pieceSymbol: string;
   let rest: string;
+  let disambiguator: 't' | 's' | undefined;
 
   if (trimmed.startsWith('Tg') || trimmed.startsWith('tg')) {
     pieceSymbol = trimmed.slice(0, 2);
@@ -40,6 +42,12 @@ const parseVietnameseMove = (moveStr: string): ParsedMove | null => {
   const pieceInfo = reversePieceSymbols[pieceSymbol];
   if (!pieceInfo) {
     return null;
+  }
+
+  // Check for trước/sau disambiguator (must come before the file number)
+  if (rest.startsWith('t') || rest.startsWith('s')) {
+    disambiguator = rest[0] as 't' | 's';
+    rest = rest.slice(1);
   }
 
   const operatorMatch = rest.match(/^(\d+)([-+.])(\d+)$/);
@@ -61,6 +69,7 @@ const parseVietnameseMove = (moveStr: string): ParsedMove | null => {
     fromFile,
     operator,
     destination,
+    disambiguator,
   };
 };
 
@@ -70,12 +79,34 @@ const convertToUci = (
 ): string | null => {
   const fromX = parsed.side === 'red' ? 9 - parsed.fromFile : parsed.fromFile - 1;
 
-  let fromY = -1;
+  // Find all pieces of the same type and color on the same file
+  const candidateYs: number[] = [];
   for (let y = 0; y < 10; y++) {
     const piece = board[y]?.[fromX];
     if (piece && piece.type === parsed.piece && piece.color === parsed.side) {
-      fromY = y;
-      break;
+      candidateYs.push(y);
+    }
+  }
+
+  if (candidateYs.length === 0) {
+    return null;
+  }
+
+  let fromY = -1;
+  
+  if (candidateYs.length === 1) {
+    fromY = candidateYs[0];
+  } else {
+    // Multiple pieces on the same file - use disambiguator
+    // For red: trước (t) = smaller y (closer to top), sau (s) = larger y (closer to bottom)
+    // For black: trước (t) = larger y (closer to bottom), sau (s) = smaller y (closer to top)
+    if (parsed.disambiguator === 't') {
+      fromY = parsed.side === 'red' ? Math.min(...candidateYs) : Math.max(...candidateYs);
+    } else if (parsed.disambiguator === 's') {
+      fromY = parsed.side === 'red' ? Math.max(...candidateYs) : Math.min(...candidateYs);
+    } else {
+      // No disambiguator provided - use the first one found (default behavior)
+      fromY = candidateYs[0];
     }
   }
 
@@ -90,18 +121,49 @@ const convertToUci = (
     toX = parsed.side === 'red' ? 9 - parsed.destination : parsed.destination - 1;
     toY = fromY;
   } else if (parsed.operator === '.') {
-    if (DIAGONAL_FILE_PIECES.includes(parsed.piece)) {
+    if (parsed.piece === 'horse') {
+      // Horse moves in an L-shape: 2 squares in one direction, 1 square perpendicular
+      // The destination number indicates the target file
+      toX = parsed.side === 'red' ? 9 - parsed.destination : parsed.destination - 1;
+      const dx = Math.abs(toX - fromX);
+      
+      // For horse, if dx=1, then dy=2; if dx=2, then dy=1
+      if (dx === 1) {
+        toY = parsed.side === 'red' ? fromY - 2 : fromY + 2;
+      } else if (dx === 2) {
+        toY = parsed.side === 'red' ? fromY - 1 : fromY + 1;
+      } else {
+        return null;
+      }
+    } else if (DIAGONAL_FILE_PIECES.includes(parsed.piece)) {
+      // Elephant and advisor move diagonally
       toX = parsed.side === 'red' ? 9 - parsed.destination : parsed.destination - 1;
       toY = parsed.side === 'red' ? fromY - Math.abs(toX - fromX) : fromY + Math.abs(toX - fromX);
     } else {
+      // Vertical forward move (pawn, rook, cannon, king)
       toX = fromX;
       toY = parsed.side === 'red' ? fromY - parsed.destination : fromY + parsed.destination;
     }
   } else {
-    if (DIAGONAL_FILE_PIECES.includes(parsed.piece)) {
+    // '+' operator - backward movement
+    if (parsed.piece === 'horse') {
+      // Horse moves in an L-shape backwards
+      toX = parsed.side === 'red' ? 9 - parsed.destination : parsed.destination - 1;
+      const dx = Math.abs(toX - fromX);
+      
+      if (dx === 1) {
+        toY = parsed.side === 'red' ? fromY + 2 : fromY - 2;
+      } else if (dx === 2) {
+        toY = parsed.side === 'red' ? fromY + 1 : fromY - 1;
+      } else {
+        return null;
+      }
+    } else if (DIAGONAL_FILE_PIECES.includes(parsed.piece)) {
+      // Diagonal backward move
       toX = parsed.side === 'red' ? 9 - parsed.destination : parsed.destination - 1;
       toY = parsed.side === 'red' ? fromY + Math.abs(toX - fromX) : fromY - Math.abs(toX - fromX);
     } else {
+      // Vertical backward move
       toX = fromX;
       toY = parsed.side === 'red' ? fromY + parsed.destination : fromY - parsed.destination;
     }
@@ -128,7 +190,7 @@ export const parseVietnameseNotation = (
   const uciMoves: string[] = [];
 
   for (const line of lines) {
-    const moveMatches = line.matchAll(/((?:Tg|tg|[A-Za-z])\d+[-+.]\d+)/g);
+    const moveMatches = line.matchAll(/((?:Tg|tg|[A-Za-z])[ts]?\d+[-+.]\d+)/g);
     
     for (const match of moveMatches) {
       const moveStr = match[1];
