@@ -4,16 +4,79 @@ import { createInitialBoard } from '../board';
 import { BoardState } from '../types';
 
 describe('Flying General Rule', () => {
-  it('should prevent move that creates flying general', () => {
+  it('should prevent king move that creates flying general', () => {
+    const board: BoardState = Array.from({ length: 10 }, () => Array(9).fill(null));
+    
+    board[0][4] = { type: 'king', color: 'black' };
+    board[9][3] = { type: 'king', color: 'red' };
+
+    const move = {
+      from: { x: 3, y: 9 },
+      to: { x: 4, y: 9 },
+    };
+
+    const result = validateMove(board, move);
+    expect(result).toBe(false);
+  });
+
+  it('should prevent cannon move that exposes flying general', () => {
     const board: BoardState = Array.from({ length: 10 }, () => Array(9).fill(null));
     
     board[0][4] = { type: 'king', color: 'black' };
     board[9][4] = { type: 'king', color: 'red' };
-    board[5][4] = { type: 'advisor', color: 'red' };
+    board[5][4] = { type: 'cannon', color: 'red' };
 
     const move = {
       from: { x: 4, y: 5 },
-      to: { x: 5, y: 6 },
+      to: { x: 5, y: 5 },
+    };
+
+    const result = validateMove(board, move);
+    expect(result).toBe(false);
+  });
+
+  it('should prevent rook move that exposes flying general', () => {
+    const board: BoardState = Array.from({ length: 10 }, () => Array(9).fill(null));
+    
+    board[0][4] = { type: 'king', color: 'black' };
+    board[9][4] = { type: 'king', color: 'red' };
+    board[5][4] = { type: 'rook', color: 'red' };
+
+    const move = {
+      from: { x: 4, y: 5 },
+      to: { x: 3, y: 5 },
+    };
+
+    const result = validateMove(board, move);
+    expect(result).toBe(false);
+  });
+
+  it('should prevent horse move that exposes flying general', () => {
+    const board: BoardState = Array.from({ length: 10 }, () => Array(9).fill(null));
+    
+    board[0][4] = { type: 'king', color: 'black' };
+    board[9][4] = { type: 'king', color: 'red' };
+    board[6][4] = { type: 'horse', color: 'red' };
+
+    const move = {
+      from: { x: 4, y: 6 },
+      to: { x: 3, y: 4 },
+    };
+
+    const result = validateMove(board, move);
+    expect(result).toBe(false);
+  });
+
+  it('should prevent pawn move that exposes flying general', () => {
+    const board: BoardState = Array.from({ length: 10 }, () => Array(9).fill(null));
+    
+    board[0][4] = { type: 'king', color: 'black' };
+    board[9][4] = { type: 'king', color: 'red' };
+    board[5][4] = { type: 'pawn', color: 'red' };
+
+    const move = {
+      from: { x: 4, y: 5 },
+      to: { x: 5, y: 5 },
     };
 
     const result = validateMove(board, move);
