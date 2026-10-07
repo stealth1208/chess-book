@@ -117,6 +117,126 @@ describe('Flying General Rule', () => {
   });
 });
 
+describe('King Safety and Check Detection', () => {
+  it('should prevent move that leaves own king in check by rook', () => {
+    const board: BoardState = Array.from({ length: 10 }, () => Array(9).fill(null));
+    
+    board[9][4] = { type: 'king', color: 'red' };
+    board[0][3] = { type: 'king', color: 'black' };
+    board[0][4] = { type: 'rook', color: 'black' };
+    board[5][4] = { type: 'rook', color: 'red' };
+
+    const move = {
+      from: { x: 4, y: 5 },
+      to: { x: 5, y: 5 },
+    };
+
+    const result = validateMove(board, move);
+    expect(result).toBe(false);
+  });
+
+  it('should prevent king from moving into check', () => {
+    const board: BoardState = Array.from({ length: 10 }, () => Array(9).fill(null));
+    
+    board[9][4] = { type: 'king', color: 'red' };
+    board[0][3] = { type: 'king', color: 'black' };
+    board[8][5] = { type: 'rook', color: 'black' };
+
+    const move = {
+      from: { x: 4, y: 9 },
+      to: { x: 5, y: 9 },
+    };
+
+    const result = validateMove(board, move);
+    expect(result).toBe(false);
+  });
+
+  it('should prevent king capture', () => {
+    const board: BoardState = Array.from({ length: 10 }, () => Array(9).fill(null));
+    
+    board[9][3] = { type: 'king', color: 'red' };
+    board[8][3] = { type: 'rook', color: 'black' };
+    board[0][4] = { type: 'king', color: 'black' };
+
+    const move = {
+      from: { x: 3, y: 8 },
+      to: { x: 3, y: 9 },
+    };
+
+    const result = validateMove(board, move);
+    expect(result).toBe(false);
+  });
+
+  it('should prevent move that exposes king to cannon attack', () => {
+    const board: BoardState = Array.from({ length: 10 }, () => Array(9).fill(null));
+    
+    board[9][4] = { type: 'king', color: 'red' };
+    board[0][4] = { type: 'king', color: 'black' };
+    board[2][4] = { type: 'cannon', color: 'black' };
+    board[5][4] = { type: 'rook', color: 'red' };
+    board[7][4] = { type: 'pawn', color: 'red' };
+
+    const move = {
+      from: { x: 4, y: 5 },
+      to: { x: 5, y: 5 },
+    };
+
+    const result = validateMove(board, move);
+    expect(result).toBe(false);
+  });
+
+  it('should prevent move that exposes king to horse attack', () => {
+    const board: BoardState = Array.from({ length: 10 }, () => Array(9).fill(null));
+    
+    board[9][4] = { type: 'king', color: 'red' };
+    board[0][4] = { type: 'king', color: 'black' };
+    board[7][6] = { type: 'horse', color: 'black' };
+    board[8][5] = { type: 'rook', color: 'red' };
+
+    const move = {
+      from: { x: 5, y: 8 },
+      to: { x: 6, y: 8 },
+    };
+
+    const result = validateMove(board, move);
+    expect(result).toBe(false);
+  });
+
+  it('should allow move that does not leave king in check', () => {
+    const board: BoardState = Array.from({ length: 10 }, () => Array(9).fill(null));
+    
+    board[9][4] = { type: 'king', color: 'red' };
+    board[0][3] = { type: 'king', color: 'black' };
+    board[0][0] = { type: 'rook', color: 'black' };
+    board[5][4] = { type: 'rook', color: 'red' };
+
+    const move = {
+      from: { x: 4, y: 5 },
+      to: { x: 5, y: 5 },
+    };
+
+    const result = validateMove(board, move);
+    expect(result).toBe(true);
+  });
+
+  it('should allow blocking a check', () => {
+    const board: BoardState = Array.from({ length: 10 }, () => Array(9).fill(null));
+    
+    board[9][4] = { type: 'king', color: 'red' };
+    board[0][4] = { type: 'king', color: 'black' };
+    board[3][4] = { type: 'rook', color: 'black' };
+    board[7][3] = { type: 'rook', color: 'red' };
+
+    const move = {
+      from: { x: 3, y: 7 },
+      to: { x: 4, y: 7 },
+    };
+
+    const result = validateMove(board, move);
+    expect(result).toBe(true);
+  });
+});
+
 describe('Basic Move Validation', () => {
   it('should validate king can move within palace', () => {
     const board = createInitialBoard();
@@ -145,6 +265,9 @@ describe('Basic Move Validation', () => {
 
   it('should validate cannon jump capture', () => {
     const board: BoardState = Array.from({ length: 10 }, () => Array(9).fill(null));
+    board[9][4] = { type: 'king', color: 'red' };
+    board[0][4] = { type: 'king', color: 'black' };
+    board[5][4] = { type: 'pawn', color: 'red' };
     board[7][1] = { type: 'cannon', color: 'red' };
     board[5][1] = { type: 'pawn', color: 'red' };
     board[3][1] = { type: 'pawn', color: 'black' };
@@ -160,6 +283,9 @@ describe('Basic Move Validation', () => {
 
   it('should prevent cannon from capturing without jump', () => {
     const board: BoardState = Array.from({ length: 10 }, () => Array(9).fill(null));
+    board[9][4] = { type: 'king', color: 'red' };
+    board[0][4] = { type: 'king', color: 'black' };
+    board[5][4] = { type: 'pawn', color: 'red' };
     board[7][1] = { type: 'cannon', color: 'red' };
     board[3][1] = { type: 'pawn', color: 'black' };
 
