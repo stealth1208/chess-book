@@ -7,7 +7,7 @@ import type { Move, StoredMove } from '@/features/engine/notation/notation.types
 import { chessBookStorageService } from '@/infrastructure/storage/chessBookStorageService';
 import type { Folder, Topic, Variation } from '@/shared/chessBook/types/chessBook';
 import { handleMalformedReplayFailure } from '@/shared/chessBook/errors/chessBookErrors';
-import { createFolderItem, createTopicItem, deleteFolderItem, renameFolderItem } from '@/shared/store/services/folderService';
+import { createFolderItem, createTopicItem, deleteFolderItem, renameFolderItem, deterministicSeedId } from '@/shared/store/services/folderService';
 import { createVariationItem, deleteVariationItem, deleteVariationsByFolderIds, moveVariationToFolderItem, renameVariationItem } from '@/shared/store/services/variationService';
 
 interface TopicStore {
@@ -158,8 +158,13 @@ function normalizeSnapshot(snapshot: { topics?: Topic[]; folders: Folder[]; vari
 }
 
 const createSeedLibrary = (): Pick<TopicStore, 'topics' | 'folders' | 'variations' | 'selectedTopicId' | 'selectedFolderId' | 'selectedVariationId' | 'expandedFolderIds'> => {
-  const rootTopic = createTopicItem('Khai cuoc Phao Dau');
-  const openingFolder = createFolderItem('Co ban', rootTopic.id, null);
+  // Use deterministic IDs to avoid SSR/client hydration mismatches
+  const topicId = deterministicSeedId('topic-khai-cuoc-phao-dau');
+  const folderId = deterministicSeedId('folder-co-ban');
+  const variationId = deterministicSeedId('variation-bien-co-ban');
+  
+  const rootTopic = createTopicItem('Khai cuoc Phao Dau', null, topicId);
+  const openingFolder = createFolderItem('Co ban', rootTopic.id, null, null, folderId);
   const startFen = 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR r';
   const sampleVariation = createVariationItem({
     name: 'Bien co ban',
@@ -167,6 +172,7 @@ const createSeedLibrary = (): Pick<TopicStore, 'topics' | 'folders' | 'variation
     moves: normalizeMoves(startFen, ['b7b4', 'h2h5']),
     topicId: rootTopic.id,
     folderId: openingFolder.id,
+    deterministicId: variationId,
   });
 
   return {

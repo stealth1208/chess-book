@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { BoardState, Coordinate, Move as EngineMove } from '@/engine/types';
+import { createEngine } from '@/engine/engine';
 import { formatMoveNotation } from '@/features/engine/notation/formatMoveNotation';
 import { moveToUci, normalizeMoves, parseUciMove } from '@/features/engine/notation/moveRecord';
 import { Move, StoredMove } from '@/features/engine/notation/notation.types';
@@ -186,7 +187,6 @@ export const useGameStore = create<GameStore>()(
 
         const uci = `${coordinateToSquare(move.from)}${coordinateToSquare(move.to)}`;
         
-        const { createEngine } = require('@/engine/engine');
         const testEngine = createEngine();
         testEngine.load(state.initialFen);
         
@@ -264,6 +264,31 @@ export const useGameStore = create<GameStore>()(
           initialFen,
           moves: normalized.moves,
           currentIndex: normalized.currentIndex,
+          boards: normalized.boards,
+          board: normalized.board,
+        };
+      },
+      merge: (persistedState, currentState) => {
+        // Rebuild boards/board on every rehydrate (not just version changes)
+        const partial = persistedState as {
+          initialFen?: string;
+          moves?: StoredMove[];
+          currentIndex?: number;
+        };
+
+        const initialFen = partial.initialFen ?? currentState.initialFen;
+        const moves = partial.moves ?? currentState.moves;
+        const currentIndex = partial.currentIndex ?? currentState.currentIndex;
+        
+        const normalized = normalizeStoreState(initialFen, moves, currentIndex);
+
+        return {
+          ...currentState,
+          initialFen,
+          moves: normalized.moves,
+          currentIndex: normalized.currentIndex,
+          boards: normalized.boards,
+          board: normalized.board,
         };
       },
       partialize: (state) => ({

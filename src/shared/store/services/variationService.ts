@@ -6,6 +6,19 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+// Deterministic ID generator for seed data to avoid SSR/client hydration mismatches
+export function deterministicSeedId(seed: string): string {
+  // Simple hash to generate consistent IDs
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  const hex = Math.abs(hash).toString(16).padStart(8, '0');
+  return `seed-${hex}-${seed.slice(0, 8)}`;
+}
+
 function newId(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
@@ -20,10 +33,11 @@ export function createVariationItem(input: {
   topicId: string;
   folderId: string | null;
   userId?: string | null;
+  deterministicId?: string;
 }): Variation {
   const ts = nowIso();
   const variation: Variation = {
-    id: newId(),
+    id: input.deterministicId ?? newId(),
     userId: input.userId ?? null,
     topicId: input.topicId,
     folderId: input.folderId,
