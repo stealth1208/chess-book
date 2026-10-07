@@ -99,7 +99,7 @@ export function validateMove(board: BoardState, move: Move): boolean {
     case 'advisor': {
       if (absDx !== 1 || absDy !== 1) return false;
       if (!isInPalace(to.x, to.y, piece.color)) return false;
-      return true;
+      break;
     }
     case 'elephant': {
       if (absDx !== 2 || absDy !== 2) return false;
@@ -110,7 +110,7 @@ export function validateMove(board: BoardState, move: Move): boolean {
       const midX = from.x + dx / 2;
       const midY = from.y + dy / 2;
       if (board[midY][midX]) return false;
-      return true;
+      break;
     }
     case 'horse': {
       if (!((absDx === 1 && absDy === 2) || (absDx === 2 && absDy === 1))) return false;
@@ -118,21 +118,22 @@ export function validateMove(board: BoardState, move: Move): boolean {
       const blockX = from.x + (absDx === 2 ? Math.sign(dx) : 0);
       const blockY = from.y + (absDy === 2 ? Math.sign(dy) : 0);
       if (board[blockY][blockX]) return false;
-      return true;
+      break;
     }
     case 'rook': {
       if (absDx !== 0 && absDy !== 0) return false;
       if (countPiecesBetween(board, from.x, from.y, to.x, to.y) > 0) return false;
-      return true;
+      break;
     }
     case 'cannon': {
       if (absDx !== 0 && absDy !== 0) return false;
       const count = countPiecesBetween(board, from.x, from.y, to.x, to.y);
       if (targetPiece) {
-        return count === 1; // Capture requires exact 1 jump
+        if (count !== 1) return false; // Capture requires exact 1 jump
       } else {
-        return count === 0; // Move requires 0 jump
+        if (count !== 0) return false; // Move requires 0 jump
       }
+      break;
     }
     case 'pawn': {
       const isRed = piece.color === 'red';
