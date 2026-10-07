@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import { useGameStore } from '@/shared/store/useGameStore';
 import { useTopicStore } from '@/shared/store/useTopicStore';
 
@@ -18,16 +18,34 @@ export function MoveListPanel({ variant = 'analysis', onSaveVariation }: MoveLis
     variations,
     selectedVariationId,
   } = useTopicStore();
+  
+  const activeRowRef = useRef<HTMLTableRowElement>(null);
+
+  // Auto-scroll active row into view
+  useEffect(() => {
+    if (activeRowRef.current) {
+      activeRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [currentIndex]);
 
   const activeVariation = variations.find((variation) => variation.id === selectedVariationId) ?? null;
 
   const analysisRows = useMemo(() => {
     const rows: Array<{ moveNumber: number; moveNotation: string; isRed: boolean; index: number }> = [];
     for (let i = 0; i < moves.length; i++) {
-      const isRed = i % 2 === 0;
+      const move = moves[i];
+      const isRed = move.side === 'red';
+      // Calculate move number based on actual sides played
+      let moveNumber = 1;
+      for (let j = 0; j <= i; j++) {
+        if (moves[j].side === 'red') {
+          moveNumber = Math.floor(j / 2) + 1;
+        }
+      }
+      
       rows.push({
-        moveNumber: Math.floor(i / 2) + 1,
-        moveNotation: moves[i].notation,
+        moveNumber,
+        moveNotation: move.notation,
         isRed,
         index: i,
       });
@@ -63,7 +81,7 @@ export function MoveListPanel({ variant = 'analysis', onSaveVariation }: MoveLis
       </div>
 
       <div className={`flex-1 overflow-y-auto custom-scrollbar ${isLibrary ? 'bg-surface-container-low' : 'bg-slate-50/30 dark:bg-slate-950/20'}`}>
-        {moves.length === 0 ? (
+        {moves.length === 0 && currentIndex === -1 ? (
           <div className="p-4 text-sm text-on-surface-variant">
             {isLibrary ? 'Chua co nuoc di de hien thi.' : 'Di mot vai nuoc tren ban co hoac nhan luu bien de tao bien moi.'}
           </div>
@@ -75,6 +93,29 @@ export function MoveListPanel({ variant = 'analysis', onSaveVariation }: MoveLis
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/10">
+              {/* Starting position row */}
+              <tr
+                ref={currentIndex === -1 ? activeRowRef : null}
+                className={`transition-colors cursor-pointer ${
+                  currentIndex === -1 ? 'bg-primary/5' : 'hover:bg-primary/5'
+                }`}
+                onClick={() => jumpTo(-1)}
+              >
+                <td className="px-4 py-2 align-middle">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block w-8 font-bold"></span>
+                    <span
+                      className={`inline-flex min-w-20 items-center justify-center rounded-full border px-3 py-1 text-sm font-bold text-gray-600 dark:text-gray-400 ${
+                        currentIndex === -1
+                          ? 'border-primary bg-primary/15 shadow-sm'
+                          : 'border-outline-variant/40 bg-surface-container-low'
+                      }`}
+                    >
+                      Bắt đầu
+                    </span>
+                  </div>
+                </td>
+              </tr>
               {analysisRows.map((row) => {
                 const moveIndex = row.index;
                 const isCurrent = currentIndex === moveIndex;
@@ -83,6 +124,7 @@ export function MoveListPanel({ variant = 'analysis', onSaveVariation }: MoveLis
                 return (
                   <tr
                     key={`${row.moveNumber}-${moveIndex}`}
+                    ref={isCurrent ? activeRowRef : null}
                     className={`transition-colors cursor-pointer ${
                       isCurrent ? 'bg-primary/5' : 'hover:bg-primary/5'
                     }`}
@@ -112,8 +154,20 @@ export function MoveListPanel({ variant = 'analysis', onSaveVariation }: MoveLis
 
       {!isLibrary && (
         <div className="p-4 bg-white dark:bg-slate-900 border-t border-outline-variant/10 grid grid-cols-2 gap-3 shrink-0">
-          <button className="py-3 text-sm font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-on-surface rounded-xl transition-all">Phân tích sâu</button>
-          <button className="py-3 text-sm font-bold bg-primary text-on-primary rounded-xl shadow-lg hover:bg-primary-container transition-all">Thử lại</button>
+          <button 
+            className="py-3 text-sm font-bold bg-slate-100 text-on-surface-variant rounded-xl transition-all opacity-50 cursor-not-allowed"
+            disabled
+            title="Tính năng đang phát triển"
+          >
+            Phân tích sâu
+          </button>
+          <button 
+            className="py-3 text-sm font-bold bg-slate-100 text-on-surface-variant rounded-xl transition-all opacity-50 cursor-not-allowed"
+            disabled
+            title="Tính năng đang phát triển"
+          >
+            Thử lại
+          </button>
         </div>
       )}
 

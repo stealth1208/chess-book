@@ -9,8 +9,8 @@ describe('useGameStore - library replay navigation', () => {
   it('should load variation at starting position (currentIndex = -1)', () => {
     const store = useGameStore.getState();
     const moves = [
-      { from: 'h7', to: 'e7', piece: 'pawn', notation: 'P8-5', side: 'red' as const, uci: 'h7e7' },
-      { from: 'h0', to: 'g2', piece: 'horse', notation: 'm2.3', side: 'black' as const, uci: 'h0g2' },
+      { from: 'h7', to: 'e7', piece: 'pawn' as const, notation: 'P8-5', side: 'red' as const, uci: 'h7e7' },
+      { from: 'h0', to: 'g2', piece: 'horse' as const, notation: 'm2.3', side: 'black' as const, uci: 'h0g2' },
     ];
     
     store.loadVariation('rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR r', moves);
@@ -24,9 +24,9 @@ describe('useGameStore - library replay navigation', () => {
   it('should allow jumping to any move after loading variation', () => {
     const store = useGameStore.getState();
     const moves = [
-      { from: 'h7', to: 'e7', piece: 'pawn', notation: 'P8-5', side: 'red' as const, uci: 'h7e7' },
-      { from: 'h0', to: 'g2', piece: 'horse', notation: 'm2.3', side: 'black' as const, uci: 'h0g2' },
-      { from: 'h9', to: 'g7', piece: 'horse', notation: 'M2.3', side: 'red' as const, uci: 'h9g7' },
+      { from: 'h7', to: 'e7', piece: 'pawn' as const, notation: 'P8-5', side: 'red' as const, uci: 'h7e7' },
+      { from: 'h0', to: 'g2', piece: 'horse' as const, notation: 'm2.3', side: 'black' as const, uci: 'h0g2' },
+      { from: 'h9', to: 'g7', piece: 'horse' as const, notation: 'M2.3', side: 'red' as const, uci: 'h9g7' },
     ];
     
     store.loadVariation('rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR r', moves);
@@ -51,8 +51,8 @@ describe('useGameStore - library replay navigation', () => {
   it('should allow undo/redo navigation after loading variation', () => {
     const store = useGameStore.getState();
     const moves = [
-      { from: 'h7', to: 'e7', piece: 'pawn', notation: 'P8-5', side: 'red' as const, uci: 'h7e7' },
-      { from: 'h0', to: 'g2', piece: 'horse', notation: 'm2.3', side: 'black' as const, uci: 'h0g2' },
+      { from: 'h7', to: 'e7', piece: 'pawn' as const, notation: 'P8-5', side: 'red' as const, uci: 'h7e7' },
+      { from: 'h0', to: 'g2', piece: 'horse' as const, notation: 'm2.3', side: 'black' as const, uci: 'h0g2' },
     ];
     
     store.loadVariation('rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR r', moves);
@@ -76,7 +76,7 @@ describe('useGameStore - library replay navigation', () => {
   it('should have boards matching the current index after loadVariation', () => {
     const store = useGameStore.getState();
     const moves = [
-      { from: 'h7', to: 'e7', piece: 'pawn', notation: 'P8-5', side: 'red' as const, uci: 'h7e7' },
+      { from: 'h7', to: 'e7', piece: 'pawn' as const, notation: 'P8-5', side: 'red' as const, uci: 'h7e7' },
     ];
     
     store.loadVariation('rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR r', moves);
@@ -105,7 +105,7 @@ describe('useGameStore - library replay navigation', () => {
     
     // Load a variation
     const moves = [
-      { from: 'h7', to: 'e7', piece: 'pawn', notation: 'P8-5', side: 'red' as const, uci: 'h7e7' },
+      { from: 'h7', to: 'e7', piece: 'pawn' as const, notation: 'P8-5', side: 'red' as const, uci: 'h7e7' },
     ];
     store.loadVariation('rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR r', moves);
     
